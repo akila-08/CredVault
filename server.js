@@ -12,11 +12,13 @@ dotenv.config();
 const app = express();
 
 app.use(
-    cors({
-        origin: [
-            "https://cred-vault-eight.vercel.app/"
-        ]
-    })
+  cors({
+    origin: [
+      "http://localhost:5173",
+      process.env.FRONTEND_URL
+    ],
+    credentials: true
+  })
 );
 app.use(express.json());
 
