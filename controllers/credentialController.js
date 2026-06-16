@@ -18,12 +18,32 @@ export async function issue(req, res) {
 
         const { student_name, register_number, degree, branch, issue_date } = req.body;
         const student_wallet = (req.body.student_wallet || "").toLowerCase(); // normalise
+        const fileName = `${Date.now()}-${req.file.originalname}`;
         const { name: institution, wallet: universityWallet } = req.university;
 
         // Step 1: Hash the raw PDF bytes — this IS the on-chain key
         // Using document hash alone means: same PDF can never be re-issued,
         // regardless of metadata changes. Verifiers only need the PDF.
         const documentHash = hashFile(req.file.path);
+
+        // Upload PDF to Supabase Storage
+const { data: uploadData, error: uploadError } =
+  await supabase.storage
+    .from("certificates")
+    .upload(fileName, fs.readFileSync(req.file.path), {
+      contentType: "application/pdf",
+      upsert: false,
+    });
+
+if (uploadError) throw uploadError;
+
+// Get public URL
+const { data: publicUrlData } =
+  supabase.storage
+    .from("certificates")
+    .getPublicUrl(fileName);
+
+const certificateUrl = publicUrlData.publicUrl;
 
         // Step 2: Duplicate check — PDF-only, metadata-independent
         const exists = await credentialExists(documentHash);
@@ -49,6 +69,8 @@ export async function issue(req, res) {
             student_wallet,
             tx_hash: txHash,
             status: "ACTIVE",
+
+            certificate_url: certificateUrl
         });
 
         if (error) throw error;

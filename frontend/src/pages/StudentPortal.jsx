@@ -92,6 +92,8 @@ function CredCard({ cred }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
+  console.log("CERT URL:", cred.certificate_url);
+  console.log("FULL CRED:", cred);
 
   return (
     <div className="card" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -133,14 +135,50 @@ function CredCard({ cred }) {
         <button className="btn btn-outline btn-sm" onClick={copyHash}>
           {copied ? "✓ Copied!" : "📋 Copy Hash"}
         </button>
-        <a
-          href={`${import.meta.env.VITE_API_URL}/api/credentials/verify`}
-          className="btn btn-sm"
-          style={{ background: "rgba(45,212,191,0.1)", color: "#2dd4bf", border: "1px solid rgba(45,212,191,0.25)", textDecoration: "none" }}
-          target="_blank" rel="noreferrer"
-        >
-          🔗 Share Verify Link
-        </a>
+        <button
+  className="btn btn-sm"
+  style={{
+    background: "rgba(45,212,191,0.1)",
+    color: "#2dd4bf",
+    border: "1px solid rgba(45,212,191,0.25)"
+  }}
+  onClick={() => {
+    if (!cred.certificate_url) {
+      toast.error("Certificate not uploaded yet");
+      return;
+    }
+
+    window.open(cred.certificate_url, "_blank");
+  }}
+>
+  📄 View Certificate
+</button>
+<button
+  className="btn btn-outline btn-sm"
+  onClick={async () => {
+    try {
+      const response = await fetch(cred.certificate_url);
+      const blob = await response.blob();
+
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${cred.student_name}_certificate.pdf`;
+
+      document.body.appendChild(a);
+      a.click();
+
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to download certificate");
+    }
+  }}
+>
+  ⬇ Download
+</button>
       </div>
     </div>
   );
