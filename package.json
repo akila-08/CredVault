@@ -20,6 +20,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "nodemailer": "^9.0.1",
+    "resend": "^6.13.0",
     "siwe": "^3.0.0",
     "uuid": "^14.0.0"
   },
