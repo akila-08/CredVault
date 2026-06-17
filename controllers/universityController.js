@@ -3,6 +3,10 @@ import {
     addUniversity as addUniOnChain,
     removeUniversity as removeUniOnChain,
 } from "../services/blockchainService.js";
+import {
+    listAccessHistory,
+    recordAccessHistory,
+} from "../services/accessHistoryService.js";
 
 // POST /api/admin/universities  (admin only)
 export async function addUniversity(req, res) {
@@ -50,6 +54,18 @@ export async function addUniversity(req, res) {
 
             if (error) throw error;
 
+            await recordAccessHistory({
+                entityType: "university",
+                entityId: data.id,
+                entityKey: normalizedWallet,
+                action: "access_restored",
+                details: {
+                    name: data.name,
+                    contact_email: data.contact_email,
+                    txHash,
+                },
+            });
+
             return res.status(200).json({ success: true, university: data, txHash });
         }
 
@@ -67,6 +83,18 @@ export async function addUniversity(req, res) {
 
         if (error) throw error;
 
+        await recordAccessHistory({
+            entityType: "university",
+            entityId: data.id,
+            entityKey: normalizedWallet,
+            action: "access_added",
+            details: {
+                name: data.name,
+                contact_email: data.contact_email,
+                txHash,
+            },
+        });
+
         res.status(201).json({ success: true, university: data, txHash });
     } catch (err) {
         console.error(err);
@@ -80,6 +108,14 @@ export async function removeUniversity(req, res) {
         const { address } = req.params;
         const normalizedWallet = address.toLowerCase();
 
+        const { data: existingUniversity, error: findError } = await supabase
+            .from("universities")
+            .select("id, name, contact_email")
+            .eq("wallet_address", normalizedWallet)
+            .maybeSingle();
+
+        if (findError) throw findError;
+
         // Remove on-chain first
         const txHash = await removeUniOnChain(address);
 
@@ -91,7 +127,33 @@ export async function removeUniversity(req, res) {
 
         if (error) throw error;
 
+        await recordAccessHistory({
+            entityType: "university",
+            entityId: existingUniversity?.id || null,
+            entityKey: normalizedWallet,
+            action: "access_removed",
+            details: {
+                name: existingUniversity?.name || null,
+                contact_email: existingUniversity?.contact_email || null,
+                txHash,
+            },
+        });
+
         res.json({ success: true, txHash });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+// GET /api/universities/history  (admin only)
+export async function getUniversityHistory(req, res) {
+    try {
+        const { data, error } = await listAccessHistory("university");
+
+        if (error) throw error;
+
+        res.json({ success: true, history: data });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: err.message });

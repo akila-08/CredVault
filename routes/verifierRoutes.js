@@ -2,6 +2,7 @@ import express from "express";
 import {
     changeVerifierPassword,
     getVerifierProfile,
+    getVerifierHistory,
     listVerifiers,
     loginVerifier,
     registerVerifier,
@@ -16,6 +17,7 @@ router.get("/profile", requireVerifier, getVerifierProfile);
 router.post("/change-password", requireVerifier, changeVerifierPassword);
 
 router.get("/", requireAdmin, listVerifiers);
+router.get("/history", requireAdmin, getVerifierHistory);
 router.post("/", requireAdmin, registerVerifier);
 router.delete("/:id", requireAdmin, removeVerifier);
 

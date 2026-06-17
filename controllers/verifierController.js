@@ -3,6 +3,10 @@ import dotenv from "dotenv";
 import supabase from "../services/supabaseService.js";
 import { sendVerifierWelcomeEmail } from "../services/emailService.js";
 import {
+    listAccessHistory,
+    recordAccessHistory,
+} from "../services/accessHistoryService.js";
+import {
     generateTemporaryPassword,
     hashPassword,
     verifyPassword,
@@ -40,6 +44,64 @@ export async function registerVerifier(req, res) {
         const temporaryPassword = generateTemporaryPassword();
         const password_hash = hashPassword(temporaryPassword);
 
+        const { data: existingVerifier, error: findError } = await supabase
+            .from("verifiers")
+            .select("id, is_active")
+            .eq("email", email)
+            .maybeSingle();
+
+        if (findError) throw findError;
+
+        if (existingVerifier?.is_active) {
+            return res.status(409).json({ success: false, message: "A verifier with this email already exists" });
+        }
+
+        if (existingVerifier) {
+            const { data, error } = await supabase
+                .from("verifiers")
+                .update({
+                    organization_name,
+                    password_hash,
+                    is_active: true,
+                    password_changed_at: null,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", existingVerifier.id)
+                .select("id, organization_name, email, is_active, created_at, password_changed_at")
+                .single();
+
+            if (error) throw error;
+
+            let emailSent = false;
+            try {
+                emailSent = await sendVerifierWelcomeEmail({
+                    email,
+                    organizationName: organization_name,
+                    password: temporaryPassword,
+                });
+            } catch (mailError) {
+                console.error("Verifier email failed:", mailError);
+            }
+
+            await recordAccessHistory({
+                entityType: "verifier",
+                entityId: data.id,
+                entityKey: email,
+                action: "access_restored",
+                details: {
+                    organization_name: data.organization_name,
+                    emailSent,
+                },
+            });
+
+            return res.status(200).json({
+                success: true,
+                verifier: data,
+                emailSent,
+                temporaryPassword: emailSent ? undefined : temporaryPassword,
+            });
+        }
+
         const { data, error } = await supabase
             .from("verifiers")
             .insert({
@@ -68,6 +130,17 @@ export async function registerVerifier(req, res) {
         } catch (mailError) {
             console.error("Verifier email failed:", mailError);
         }
+
+        await recordAccessHistory({
+            entityType: "verifier",
+            entityId: data.id,
+            entityKey: email,
+            action: "access_added",
+            details: {
+                organization_name: data.organization_name,
+                emailSent,
+            },
+        });
 
         res.status(201).json({
             success: true,
@@ -102,6 +175,14 @@ export async function removeVerifier(req, res) {
     try {
         const { id } = req.params;
 
+        const { data: existingVerifier, error: findError } = await supabase
+            .from("verifiers")
+            .select("id, organization_name, email")
+            .eq("id", id)
+            .maybeSingle();
+
+        if (findError) throw findError;
+
         const { error } = await supabase
             .from("verifiers")
             .update({ is_active: false, updated_at: new Date().toISOString() })
@@ -109,7 +190,30 @@ export async function removeVerifier(req, res) {
 
         if (error) throw error;
 
+        await recordAccessHistory({
+            entityType: "verifier",
+            entityId: existingVerifier?.id || id,
+            entityKey: existingVerifier?.email || id,
+            action: "access_removed",
+            details: {
+                organization_name: existingVerifier?.organization_name || null,
+            },
+        });
+
         res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+export async function getVerifierHistory(req, res) {
+    try {
+        const { data, error } = await listAccessHistory("verifier");
+
+        if (error) throw error;
+
+        res.json({ success: true, history: data });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: err.message });

@@ -1,6 +1,7 @@
 import express from "express";
 import {
     addUniversity,
+    getUniversityHistory,
     removeUniversity,
     listUniversities,
 } from "../controllers/universityController.js";
@@ -10,6 +11,9 @@ const router = express.Router();
 
 // GET  /api/universities           — public: list all active universities
 router.get("/", listUniversities);
+
+// GET /api/universities/history    — admin only: university access history
+router.get("/history", requireAdmin, getUniversityHistory);
 
 // POST /api/universities           — admin only: register a new university
 router.post("/", requireAdmin, addUniversity);
