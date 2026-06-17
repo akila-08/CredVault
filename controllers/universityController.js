@@ -34,7 +34,6 @@ export async function addUniversity(req, res) {
         }
 
         // Register on-chain first
-        const txHash = await addUniOnChain(wallet_address);
         const txHash = await addUniOnChain(normalizedWallet);
 
         if (existingUniversity) {
