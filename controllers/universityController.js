@@ -18,8 +18,41 @@ export async function addUniversity(req, res) {
 
         const normalizedWallet = wallet_address.toLowerCase();
 
+        const { data: existingUniversity, error: findError } = await supabase
+            .from("universities")
+            .select("id, is_active")
+            .eq("wallet_address", normalizedWallet)
+            .maybeSingle();
+
+        if (findError) throw findError;
+
+        if (existingUniversity?.is_active) {
+            return res.status(409).json({
+                success: false,
+                message: "A university with this wallet address already exists",
+            });
+        }
+
         // Register on-chain first
         const txHash = await addUniOnChain(wallet_address);
+        const txHash = await addUniOnChain(normalizedWallet);
+
+        if (existingUniversity) {
+            const { data, error } = await supabase
+                .from("universities")
+                .update({
+                    name,
+                    contact_email: contact_email || null,
+                    is_active: true,
+                })
+                .eq("id", existingUniversity.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            return res.status(200).json({ success: true, university: data, txHash });
+        }
 
         // Then persist to Supabase
         const { data, error } = await supabase
