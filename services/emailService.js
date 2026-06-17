@@ -1,88 +1,55 @@
-import nodemailer from "nodemailer";
-
-function smtpConfigured() {
-    const configured =
-        !!process.env.SMTP_USER &&
-        !!process.env.SMTP_PASS;
-
-    console.log("SMTP_USER =", process.env.SMTP_USER);
-    console.log("SMTP_PASS exists =", !!process.env.SMTP_PASS);
-    console.log("SMTP configured check:", configured);
-
-    return configured;
-}
-
-function createTransporter() {
-    return nodemailer.createTransport({
-        host: "smtp-relay.brevo.com",
-        port: 587,
-        secure: false,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-        },
-    });
-}
+import SibApiV3Sdk from "sib-api-v3-sdk";
 
 export async function sendVerifierWelcomeEmail({
-    email,
-    organizationName,
-    password,
+  email,
+  organizationName,
+  password,
 }) {
-    if (!smtpConfigured()) {
-        console.warn("SMTP is not configured.");
-        return false;
-    }
+  try {
+    const client = SibApiV3Sdk.ApiClient.instance;
+
+    client.authentications["api-key"].apiKey =
+      process.env.BREVO_API_KEY;
+
+    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
     const frontendUrl =
-        process.env.FRONTEND_URL ||
-        "https://cred-vault-eight.vercel.app";
+      process.env.FRONTEND_URL ||
+      "https://cred-vault-eight.vercel.app";
 
     const loginUrl = `${frontendUrl}/verify`;
 
-    const from =
-        process.env.SMTP_FROM || "credvault3@gmail.com";
+    await apiInstance.sendTransacEmail({
+      sender: {
+        email: "credvault3@gmail.com",
+        name: "CredVault",
+      },
+      to: [
+        {
+          email,
+        },
+      ],
+      subject: "Your CredVault verifier account",
+      htmlContent: `
+        <h3>Hello ${organizationName}</h3>
 
-    try {
-        const transporter = createTransporter();
+        <p>Your CredVault verifier account has been created.</p>
 
-        const info = await transporter.sendMail({
-            from,
-            to: email,
-            subject: "Your CredVault verifier account",
-            text: `
-Hello ${organizationName},
+        <p><b>Email:</b> ${email}</p>
+        <p><b>Temporary Password:</b> ${password}</p>
 
-Your CredVault verifier account has been created.
+        <p>
+          <a href="${loginUrl}">
+            Login to CredVault
+          </a>
+        </p>
+      `,
+    });
 
-Email: ${email}
-Temporary Password: ${password}
-
-Login: ${loginUrl}
-
-Please sign in and change your password.
-`,
-            html: `
-                <h3>Hello ${organizationName}</h3>
-                <p>Your CredVault verifier account has been created.</p>
-
-                <p><b>Email:</b> ${email}</p>
-                <p><b>Temporary Password:</b> ${password}</p>
-
-                <p>
-                    <a href="${loginUrl}">
-                        Login to CredVault
-                    </a>
-                </p>
-
-                <p>Please sign in and change your password.</p>
-            `,
-        });
-
-        console.log("Email sent:", info.messageId);
-        return true;
-    } catch (err) {
-        console.error("Brevo SMTP Error:", err);
-        return false;
-    }
+    console.log("Email sent successfully");
+    return true;
+  } catch (err) {
+    console.error("Brevo API Error:", err);
+    return false;
+  }
 }
