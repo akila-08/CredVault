@@ -19,10 +19,7 @@ export default function AdminPanel() {
   const [removingUniversity, setRemovingUniversity] = useState(null);
   const [removingVerifier, setRemovingVerifier] = useState(null);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("cv_admin_key");
-    if (saved) setAdminKey(saved);
-  }, []);
+
 
   useEffect(() => {
     if (!authenticated || activeSection !== "university") return;
@@ -39,7 +36,7 @@ export default function AdminPanel() {
     setLoading(true);
     try {
       await API.get("/api/admin/verify-key", { headers: { "x-admin-key": adminKey } });
-      localStorage.setItem("cv_admin_key", adminKey);
+      
       setAuthenticated(true);
       toast.success("Admin access granted");
     } catch {
@@ -150,10 +147,10 @@ export default function AdminPanel() {
   }
 
   function logout() {
-    localStorage.removeItem("cv_admin_key");
-    setAuthenticated(false);
-    setActiveSection(null);
-  }
+  setAdminKey("");
+  setAuthenticated(false);
+  setActiveSection(null);
+}
 
   if (!authenticated) {
     return (
