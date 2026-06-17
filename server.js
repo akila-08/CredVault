@@ -6,6 +6,8 @@ import fs from "fs";
 
 dotenv.config();
 
+console.log("SERVER SMTP_HOST =", process.env.SMTP_HOST);
+
 import credentialRoutes from "./routes/credentialRoutes.js";
 import universityRoutes from "./routes/universityRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
