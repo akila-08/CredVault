@@ -124,6 +124,10 @@ p  { line-height: 1.65; color: var(--text-secondary); }
   transition: all 0.25s ease;
 }
 .card:hover { background: var(--bg-card-hover); border-color: var(--border-active); }
+.active-admin-card {
+  border-color: var(--border-active);
+  background: rgba(99,102,241,0.12);
+}
 
 /* ── Form inputs ─────────────────────────────────────────────── */
 .input-group { display: flex; flex-direction: column; gap: 0.5rem; }

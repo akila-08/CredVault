@@ -7,7 +7,7 @@ import {
     getUniversityCredentials,
     getMyCredentials,
 } from "../controllers/credentialController.js";
-import { requireUniversity } from "../middleware/authMiddleware.js";
+import { requireUniversity, requireVerifier } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -15,7 +15,7 @@ const router = express.Router();
 router.post("/issue", requireUniversity, upload.single("certificate"), issue);
 
 // POST /api/credentials/verify     — public: upload PDF + metadata → verify on-chain
-router.post("/verify", upload.single("certificate"), verify);
+router.post("/verify", requireVerifier, upload.single("certificate"), verify);
 
 // POST /api/credentials/revoke     — university only: revoke a certificate
 router.post("/revoke", requireUniversity, revoke);

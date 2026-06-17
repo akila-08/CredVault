@@ -8,7 +8,6 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-console.log(import.meta.env);
 
 /* ── Auth Panel ──────────────────────────────────────────── */
 function AuthPanel({ onLogin }) {

@@ -33,6 +33,36 @@ export function requireUniversity(req, res, next) {
     }
 }
 
+// Protects verifier-only routes
+// Expects: Authorization: Bearer <jwt>
+export function requireVerifier(req, res, next) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ success: false, message: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        if (decoded.role !== "verifier") {
+            return res.status(403).json({ success: false, message: "Verifier access required" });
+        }
+
+        req.verifier = {
+            id: decoded.verifierId,
+            email: decoded.email,
+            organizationName: decoded.organizationName,
+        };
+
+        next();
+    } catch (err) {
+        return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    }
+}
+
 // Protects admin-only routes
 // Expects: x-admin-key header
 export function requireAdmin(req, res, next) {
