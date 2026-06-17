@@ -3,6 +3,9 @@ import dotenv from "dotenv";
 import cors from "cors";
 import fs from "fs";
 
+
+dotenv.config();
+
 import credentialRoutes from "./routes/credentialRoutes.js";
 import universityRoutes from "./routes/universityRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -15,7 +18,7 @@ console.log("SMTP:", {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS ? "loaded" : "missing"
 });
-dotenv.config();
+
 
 const app = express();
 
