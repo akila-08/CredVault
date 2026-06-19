@@ -6,6 +6,11 @@ import {
     revokeCredential as revokeOnChain,
 } from "../services/blockchainService.js";
 import supabase from "../services/supabaseService.js";
+import { extractTextFromDocument } from "../services/documentTextService.js";
+import {
+    extractCredentialFields,
+    saveCredentialExtractionAliases,
+} from "../services/credentialExtractionService.js";
 import fs from "fs";
 
 // ── Issue ─────────────────────────────────────────────────────
@@ -91,9 +96,54 @@ const certificateUrl = publicUrlData.publicUrl;
 }
 
 // ── Verify ────────────────────────────────────────────────────
-// POST /api/credentials/verify  (public)
 // Only the certificate PDF is required — no metadata needed.
 // The documentHash IS the on-chain key, so uploading the original PDF is enough.
+// POST /api/credentials/extract  (requireUniversity)
+// OCR-assisted metadata extraction. This does not issue anything on-chain.
+export async function extract(req, res) {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "Certificate PDF required" });
+        }
+
+        const { text, provider, usedOcr } = await extractTextFromDocument(req.file.path);
+        const extraction = await extractCredentialFields({
+            text,
+            universityWallet: req.university.wallet,
+        });
+
+        fs.unlink(req.file.path, () => {});
+
+        res.json({
+            success: true,
+            provider,
+            usedOcr,
+            ...extraction,
+            textPreview: text.replace(/\s+/g, " ").trim().slice(0, 1500),
+        });
+    } catch (err) {
+        console.error(err);
+        if (req.file) fs.unlink(req.file.path, () => {});
+        res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+// POST /api/credentials/extraction-rules  (requireUniversity)
+// Optional: save university-specific labels, e.g. "Index No" -> register_number.
+export async function saveExtractionRules(req, res) {
+    try {
+        const result = await saveCredentialExtractionAliases({
+            universityWallet: req.university.wallet,
+            aliasesByField: req.body.aliasesByField,
+        });
+
+        res.json({ success: true, ...result });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+}
+
 export async function verify(req, res) {
     try {
         if (!req.file) {

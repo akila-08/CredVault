@@ -2,6 +2,8 @@ import express from "express";
 import upload from "../middleware/upload.js";
 import {
     issue,
+    extract,
+    saveExtractionRules,
     verify,
     revoke,
     getUniversityCredentials,
@@ -13,6 +15,8 @@ const router = express.Router();
 
 // POST /api/credentials/issue      — university only: issue a new certificate
 router.post("/issue", requireUniversity, upload.single("certificate"), issue);
+router.post("/extract", requireUniversity, upload.single("certificate"), extract);
+router.post("/extraction-rules", requireUniversity, saveExtractionRules);
 
 // POST /api/credentials/verify     — public: upload PDF + metadata → verify on-chain
 router.post("/verify", requireVerifier, upload.single("certificate"), verify);

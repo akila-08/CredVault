@@ -99,10 +99,16 @@ function IssueForm({ university, onIssued }) {
   });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [extraction, setExtraction] = useState(null);
   const [result, setResult] = useState(null);
 
   const onDrop = useCallback((accepted) => {
-    if (accepted[0]) setFile(accepted[0]);
+    if (accepted[0]) {
+      setFile(accepted[0]);
+      setExtraction(null);
+      setResult(null);
+    }
   }, []);
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop, accept: { "application/pdf": [".pdf"] }, maxFiles: 1,
@@ -110,6 +116,29 @@ function IssueForm({ university, onIssued }) {
 
   function handleChange(e) {
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+  }
+
+  async function handleExtract() {
+    if (!file) { toast.error("Please upload the certificate PDF first"); return; }
+    setExtracting(true);
+    setExtraction(null);
+    try {
+      const fd = new FormData();
+      fd.append("certificate", file);
+      const { data } = await API.post("/api/credentials/extract", fd);
+      setExtraction(data);
+      setForm((p) => ({
+        ...p,
+        ...Object.fromEntries(
+          Object.entries(data.fields || {}).filter(([, value]) => value)
+        ),
+      }));
+      toast.success(`Extracted fields with ${data.confidence}% confidence`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setExtracting(false);
+    }
   }
 
   async function handleSubmit(e) {
@@ -144,6 +173,28 @@ function IssueForm({ university, onIssued }) {
           : <p>Drag & drop the certificate PDF here, or <span style={{ color: "#818cf8" }}>click to browse</span></p>
         }
       </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+        <button type="button" className="btn btn-outline" onClick={handleExtract} disabled={!file || extracting}>
+          {extracting ? <><span className="spinner" /> Extracting...</> : "Extract Fields"}
+        </button>
+        {extraction && (
+          <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>
+            {extraction.provider} - {extraction.confidence}% confidence
+          </span>
+        )}
+      </div>
+
+      {extraction?.textPreview && (
+        <div style={{ background: "rgba(15,23,42,0.55)", border: "1px solid rgba(148,163,184,0.18)", borderRadius: 8, padding: "0.9rem 1rem" }}>
+          <p style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", marginBottom: "0.5rem" }}>
+            OCR Preview
+          </p>
+          <p style={{ fontSize: "0.8rem", color: "#64748b", lineHeight: 1.6, maxHeight: 90, overflow: "auto" }}>
+            {extraction.textPreview}
+          </p>
+        </div>
+      )}
 
       <div className="grid-2">
         {[
