@@ -65,14 +65,22 @@ function AuthPanel({ onLogin }) {
 
       if (result.error) throw result.error;
 
-      if (mode === "signup" && !result.data.session) {
-        toast.success("Check your email to confirm your account!");
-        setMode("login");
-        return;
-      }
+if (mode === "signup" && !result.data.session) {
+  toast.success("Check your email to confirm your account!");
+  setMode("login");
+  return;
+}
 
-      onLogin(result.data.user);
-      toast.success("Welcome to CredVault!");
+localStorage.setItem(
+  "loginTime",
+  Date.now().toString()
+);
+localStorage.setItem(
+  "loginExpiry",
+  (Date.now() + 24 * 60 * 60 * 1000).toString()
+);
+onLogin(result.data.user);
+toast.success("Welcome to CredVault!");
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -278,6 +286,7 @@ function CredCard({ cred }) {
 function Dashboard({ user, onLogout }) {
   const [creds, setCreds] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [studentWallet, setStudentWallet] = useState("");
   const [requests, setRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [approving, setApproving] = useState(null);
@@ -459,7 +468,6 @@ function Dashboard({ user, onLogout }) {
   </div>
 ) : (
   <>
-    
 
     <div className="grid-2">
       {creds.map((c) => (
@@ -478,22 +486,66 @@ export default function StudentPortal() {
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession()
-      .then(({ data }) => setUser(data.session?.user || null))
-      .finally(() => setCheckingSession(false));
+  const checkSessionExpiry = async () => {
+    const loginExpiry =
+      localStorage.getItem("loginExpiry");
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!loginExpiry) return;
+
+    if (Date.now() > Number(loginExpiry)) {
+      await supabase.auth.signOut();
+
+      localStorage.removeItem("loginTime");
+      localStorage.removeItem("loginExpiry");
+
+      toast.error(
+        "Session expired. Please login again."
+      );
+
+      setUser(null);
+    }
+  };
+
+  checkSessionExpiry();
+
+  const interval = setInterval(
+    checkSessionExpiry,
+    10000 // every 10 seconds
+  );
+
+  supabase.auth
+    .getSession()
+    .then(({ data }) =>
+      setUser(data.session?.user || null)
+    )
+    .finally(() =>
+      setCheckingSession(false)
+    );
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
       setUser(session?.user || null);
-    });
+    }
+  );
 
-    return () => listener.subscription.unsubscribe();
-  }, []);
+  return () => {
+    clearInterval(interval);
+    subscription.unsubscribe();
+  };
+}, []);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    setUser(null);
-    toast("Logged out");
-  }
+  await supabase.auth.signOut();
+
+  localStorage.removeItem("loginTime");
+  localStorage.removeItem("loginExpiry");
+
+  setUser(null);
+
+  toast("Logged out");
+}
 
   if (checkingSession) {
     return (

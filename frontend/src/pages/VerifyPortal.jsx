@@ -30,18 +30,55 @@ export default function VerifyPortal() {
   const [requestingOwnership, setRequestingOwnership] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("cv_verifier_token");
-    if (!token) return;
+  const checkSessionExpiry = () => {
+    const expiry =
+      localStorage.getItem("cv_verifier_expiry");
 
-    setAuthenticated(true);
-    API.get("/api/verifiers/profile")
-      .then(({ data }) => setVerifier(data.verifier))
-      .catch(() => {
-        localStorage.removeItem("cv_verifier_token");
-        setAuthenticated(false);
-        setVerifier(null);
-      });
-  }, []);
+    if (!expiry) return;
+
+    if (Date.now() > Number(expiry)) {
+      localStorage.removeItem("cv_verifier_token");
+      localStorage.removeItem("cv_verifier_expiry");
+
+      setAuthenticated(false);
+      setVerifier(null);
+
+      toast.error(
+        "Session expired. Please login again."
+      );
+    }
+  };
+
+  checkSessionExpiry();
+
+  const interval = setInterval(
+    checkSessionExpiry,
+    10000
+  );
+
+  const token =
+    localStorage.getItem("cv_verifier_token");
+
+  if (!token) {
+    return () => clearInterval(interval);
+  }
+
+  setAuthenticated(true);
+
+  API.get("/api/verifiers/profile")
+    .then(({ data }) => {
+      setVerifier(data.verifier);
+    })
+    .catch(() => {
+      localStorage.removeItem("cv_verifier_token");
+      localStorage.removeItem("cv_verifier_expiry");
+
+      setAuthenticated(false);
+      setVerifier(null);
+    });
+
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
     if (authenticated) loadRequests();
@@ -91,9 +128,16 @@ export default function VerifyPortal() {
     try {
       const { data } = await API.post("/api/verifiers/login", loginForm);
       localStorage.setItem("cv_verifier_token", data.token);
-      setVerifier(data.verifier);
-      setAuthenticated(true);
-      toast.success("Verifier login successful");
+
+localStorage.setItem(
+  "cv_verifier_expiry",
+  (Date.now() + 24 * 60 * 60 * 1000).toString()
+);
+
+setVerifier(data.verifier);
+setAuthenticated(true);
+
+toast.success("Verifier login successful");
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     } finally {
@@ -102,15 +146,24 @@ export default function VerifyPortal() {
   }
 
   function logout() {
-    localStorage.removeItem("cv_verifier_token");
-    setAuthenticated(false);
-    setVerifier(null);
-    setLoginForm({ email: "", password: "" });
-    setFile(null);
-    setResult(null);
-    setRequests([]);
-    setProfileOpen(false);
-  }
+  localStorage.removeItem("cv_verifier_token");
+  localStorage.removeItem("cv_verifier_expiry");
+
+  setAuthenticated(false);
+  setVerifier(null);
+
+  setLoginForm({
+    email: "",
+    password: "",
+  });
+
+  setFile(null);
+  setResult(null);
+  setRequests([]);
+  setProfileOpen(false);
+
+  toast("Logged out");
+}
 
   async function submitPasswordChange(e) {
     e.preventDefault();

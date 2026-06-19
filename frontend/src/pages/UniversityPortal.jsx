@@ -51,9 +51,15 @@ function LoginStep({ onLogin }) {
       });
 
       localStorage.setItem("cv_uni_token", loginRes.token);
-      localStorage.setItem("cv_uni_info", JSON.stringify(loginRes.university));
-      toast.success(`Welcome, ${loginRes.university.name}!`);
-      onLogin(loginRes.university);
+localStorage.setItem("cv_uni_info", JSON.stringify(loginRes.university));
+
+localStorage.setItem(
+  "cv_uni_expiry",
+  (Date.now() + 24 * 60 * 60 * 1000).toString()
+);
+
+toast.success(`Welcome, ${loginRes.university.name}!`);
+onLogin(loginRes.university);
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     } finally {
@@ -291,12 +297,45 @@ export default function UniversityPortal() {
   const [tab, setTab] = useState("issue");
   const [issued, setIssued] = useState(0);
 
+  useEffect(() => {
+  const checkSessionExpiry = () => {
+    const expiry =
+      localStorage.getItem("cv_uni_expiry");
+
+    if (!expiry) return;
+
+    if (Date.now() > Number(expiry)) {
+      localStorage.removeItem("cv_uni_token");
+      localStorage.removeItem("cv_uni_info");
+      localStorage.removeItem("cv_uni_expiry");
+
+      toast.error(
+        "Session expired. Please login again."
+      );
+
+      setUniversity(null);
+    }
+  };
+
+  checkSessionExpiry();
+
+  const interval = setInterval(
+    checkSessionExpiry,
+    10000
+  );
+
+  return () => clearInterval(interval);
+}, []);
+
   function handleLogout() {
-    localStorage.removeItem("cv_uni_token");
-    localStorage.removeItem("cv_uni_info");
-    setUniversity(null);
-    toast("Logged out");
-  }
+  localStorage.removeItem("cv_uni_token");
+  localStorage.removeItem("cv_uni_info");
+  localStorage.removeItem("cv_uni_expiry");
+
+  setUniversity(null);
+
+  toast("Logged out");
+}
 
   if (!university) return <LoginStep onLogin={setUniversity} />;
 
