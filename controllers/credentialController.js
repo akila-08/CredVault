@@ -8,8 +8,11 @@ import {
 import supabase from "../services/supabaseService.js";
 import fs from "fs";
 
-// ── Issue ─────────────────────────────────────────────────────
-// POST /api/credentials/issue  (requireUniversity)
+function normalizeEmail(email) {
+    return String(email || "").trim().toLowerCase();
+}
+
+// POST /api/credentials/issue (requireUniversity)
 export async function issue(req, res) {
     try {
         if (!req.file) {
@@ -17,49 +20,51 @@ export async function issue(req, res) {
         }
 
         const { student_name, register_number, degree, branch, issue_date } = req.body;
-        const student_wallet = (req.body.student_wallet || "").toLowerCase(); // normalise
+        const student_email = normalizeEmail(req.body.student_email);
+        const student_wallet = String(req.body.student_wallet || "").trim().toLowerCase();
         const fileName = `${Date.now()}-${req.file.originalname}`;
         const { name: institution, wallet: universityWallet } = req.university;
 
-        // Step 1: Hash the raw PDF bytes — this IS the on-chain key
-        // Using document hash alone means: same PDF can never be re-issued,
-        // regardless of metadata changes. Verifiers only need the PDF.
+        if (!student_email) {
+            fs.unlink(req.file.path, () => {});
+            return res.status(400).json({ success: false, message: "student_email is required" });
+        }
+
+        if (!student_wallet) {
+            fs.unlink(req.file.path, () => {});
+            return res.status(400).json({ success: false, message: "student_wallet is required" });
+        }
+
         const documentHash = hashFile(req.file.path);
 
-        // Upload PDF to Supabase Storage
-const { data: uploadData, error: uploadError } =
-  await supabase.storage
-    .from("certificates")
-    .upload(fileName, fs.readFileSync(req.file.path), {
-      contentType: "application/pdf",
-      upsert: false,
-    });
+        const { error: uploadError } = await supabase.storage
+            .from("certificates")
+            .upload(fileName, fs.readFileSync(req.file.path), {
+                contentType: "application/pdf",
+                upsert: false,
+            });
 
-if (uploadError) throw uploadError;
+        if (uploadError) throw uploadError;
 
-// Get public URL
-const { data: publicUrlData } =
-  supabase.storage
-    .from("certificates")
-    .getPublicUrl(fileName);
+        const { data: publicUrlData } = supabase.storage
+            .from("certificates")
+            .getPublicUrl(fileName);
 
-const certificateUrl = publicUrlData.publicUrl;
+        const certificateUrl = publicUrlData.publicUrl;
 
-        // Step 2: Duplicate check — PDF-only, metadata-independent
         const exists = await credentialExists(documentHash);
         if (exists) {
             fs.unlink(req.file.path, () => {});
             return res.status(409).json({ success: false, message: "This certificate PDF already exists on-chain" });
         }
 
-        // Step 3: Issue on-chain using the document hash as the credential key
         const txHash = await issueCredential(documentHash, student_wallet);
 
-        // Step 4: Persist off-chain record (metadata stored in Supabase for display)
         const { error } = await supabase.from("credentials").insert({
-            document_hash: documentHash,      // sha256 of PDF — also the on-chain key
-            credential_hash: documentHash,    // same value; kept for API compatibility
+            document_hash: documentHash,
+            credential_hash: documentHash,
             student_name,
+            student_email,
             register_number,
             degree,
             branch,
@@ -69,18 +74,16 @@ const certificateUrl = publicUrlData.publicUrl;
             student_wallet,
             tx_hash: txHash,
             status: "ACTIVE",
-
-            certificate_url: certificateUrl
+            certificate_url: certificateUrl,
         });
 
         if (error) throw error;
 
-        // Clean up temp file
         fs.unlink(req.file.path, () => {});
 
         res.status(201).json({
             success: true,
-            credentialHash: documentHash,  // documentHash is the on-chain key
+            credentialHash: documentHash,
             txHash,
         });
     } catch (err) {
@@ -90,21 +93,16 @@ const certificateUrl = publicUrlData.publicUrl;
     }
 }
 
-// ── Verify ────────────────────────────────────────────────────
-// POST /api/credentials/verify  (public)
-// Only the certificate PDF is required — no metadata needed.
-// The documentHash IS the on-chain key, so uploading the original PDF is enough.
+// POST /api/credentials/verify (requireVerifier)
 export async function verify(req, res) {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "Certificate PDF required" });
         }
 
-        // Hash the uploaded PDF — this is the on-chain key
         const documentHash = hashFile(req.file.path);
         fs.unlink(req.file.path, () => {});
 
-        // Query the smart contract — no metadata needed
         const result = await verifyOnChain(documentHash);
         const [exists, revoked, studentWalletOnChain, issuedAt, issuedBy] = result;
 
@@ -112,29 +110,28 @@ export async function verify(req, res) {
             return res.json({
                 success: true,
                 status: "INVALID",
-                message: "Certificate not found on blockchain — it may be forged or tampered",
+                message: "Certificate not found on blockchain - it may be forged or tampered",
                 credentialHash: documentHash,
             });
         }
 
-        // Fetch off-chain metadata from Supabase for display purposes
         const { data: cred } = await supabase
             .from("credentials")
-            .select("student_name, register_number, degree, branch, institution, issue_date, university_wallet")
+            .select("id, student_name, student_email, register_number, degree, branch, institution, issue_date, university_wallet")
             .eq("document_hash", documentHash)
             .single();
 
-        // Fetch issuing university name
         const { data: uni } = await supabase
             .from("universities")
             .select("name")
-            .eq("wallet_address", (issuedBy || "").toLowerCase())
+            .eq("wallet_address", String(issuedBy || "").toLowerCase())
             .single();
 
         res.json({
             success: true,
             status: revoked ? "REVOKED" : "VALID",
             credentialHash: documentHash,
+            credentialId: cred?.id || null,
             onChain: {
                 issuedAt: issuedAt ? new Date(Number(issuedAt) * 1000).toISOString() : null,
                 issuedBy,
@@ -151,8 +148,7 @@ export async function verify(req, res) {
     }
 }
 
-// ── Revoke ────────────────────────────────────────────────────
-// POST /api/credentials/revoke  (requireUniversity)
+// POST /api/credentials/revoke (requireUniversity)
 export async function revoke(req, res) {
     try {
         const { credential_hash } = req.body;
@@ -161,7 +157,6 @@ export async function revoke(req, res) {
             return res.status(400).json({ success: false, message: "credential_hash is required" });
         }
 
-        // Confirm the credential was issued by this university
         const { data: cred, error } = await supabase
             .from("credentials")
             .select("id, university_wallet, status")
@@ -183,10 +178,8 @@ export async function revoke(req, res) {
             return res.status(409).json({ success: false, message: "Credential is already revoked" });
         }
 
-        // Revoke on-chain
         const txHash = await revokeOnChain(credential_hash);
 
-        // Update Supabase
         await supabase
             .from("credentials")
             .update({ status: "REVOKED" })
@@ -199,8 +192,7 @@ export async function revoke(req, res) {
     }
 }
 
-// ── University: list issued credentials ───────────────────────
-// GET /api/credentials/university  (requireUniversity)
+// GET /api/credentials/university (requireUniversity)
 export async function getUniversityCredentials(req, res) {
     try {
         const { wallet } = req.university;
@@ -220,8 +212,7 @@ export async function getUniversityCredentials(req, res) {
     }
 }
 
-// ── Student: view own credentials ─────────────────────────────
-// GET /api/credentials/mine?student_wallet=0x...  (public, filtered by wallet)
+// GET /api/credentials/mine?student_wallet=0x... (public, filtered by wallet)
 export async function getMyCredentials(req, res) {
     try {
         const { student_wallet } = req.query;

@@ -1,15 +1,12 @@
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import API from "../api/client";
 
-/* ── Helpers ──────────────────────────────────────────────── */
 function truncate(addr) {
-  return addr ? addr.slice(0, 6) + "…" + addr.slice(-4) : "";
+  return addr ? addr.slice(0, 6) + "..." + addr.slice(-4) : "";
 }
-
-/* ── Sub-components ───────────────────────────────────────── */
 
 function LoginStep({ onLogin }) {
   const [loading, setLoading] = useState(false);
@@ -26,12 +23,9 @@ function LoginStep({ onLogin }) {
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
 
-      // 1. Get nonce
       const { data: nonceRes } = await API.get(`/api/auth/nonce/${address}`);
       const nonce = nonceRes.nonce;
 
-      // 2. Build SIWE message (EIP-4361 format — constructed manually
-      //    because siwe v3 is Node.js-only and cannot run in the browser)
       const domain = window.location.host;
       const origin = window.location.origin;
       const issuedAt = new Date().toISOString();
@@ -42,16 +36,14 @@ function LoginStep({ onLogin }) {
         "Sign in to CredVault University Portal",
         "",
         `URI: ${origin}`,
-        `Version: 1`,
-        `Chain ID: 80002`,
+        "Version: 1",
+        "Chain ID: 80002",
         `Nonce: ${nonce}`,
         `Issued At: ${issuedAt}`,
       ].join("\n");
 
-      // 3. Sign (one-time wallet interaction)
       const signature = await signer.signMessage(preparedMsg);
 
-      // 4. Exchange for JWT
       const { data: loginRes } = await API.post("/api/auth/login", {
         message: preparedMsg,
         signature,
@@ -73,14 +65,14 @@ function LoginStep({ onLogin }) {
     <div style={{ minHeight: "calc(100vh - 70px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
       <div style={{ maxWidth: 440, width: "100%" }}>
         <div className="card" style={{ textAlign: "center", padding: "3rem 2.5rem" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🏛️</div>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>CV</div>
           <h2 style={{ marginBottom: "0.5rem" }}>University Portal</h2>
           <p style={{ marginBottom: "2rem" }}>
             Connect your registered wallet to issue and manage student certificates.
             You only need to sign <strong style={{ color: "#f1f5f9" }}>once</strong> to get a 24-hour session.
           </p>
           <button className="btn btn-primary btn-full" onClick={handleConnect} disabled={loading}>
-            {loading ? <><span className="spinner" /> Connecting…</> : "🦊 Connect Wallet"}
+            {loading ? <><span className="spinner" /> Connecting...</> : "Connect Wallet"}
           </button>
           <p style={{ fontSize: "0.8rem", marginTop: "1rem", color: "#475569" }}>
             Only wallets registered by admin can log in
@@ -91,11 +83,15 @@ function LoginStep({ onLogin }) {
   );
 }
 
-/* ── Issue Certificate Form ─────────────────────────────── */
 function IssueForm({ university, onIssued }) {
   const [form, setForm] = useState({
-    student_name: "", register_number: "", degree: "",
-    branch: "", issue_date: "", student_wallet: "",
+    student_name: "",
+    student_email: "",
+    register_number: "",
+    degree: "",
+    branch: "",
+    issue_date: "",
+    student_wallet: "",
   });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -105,7 +101,9 @@ function IssueForm({ university, onIssued }) {
     if (accepted[0]) setFile(accepted[0]);
   }, []);
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { "application/pdf": [".pdf"] }, maxFiles: 1,
+    onDrop,
+    accept: { "application/pdf": [".pdf"] },
+    maxFiles: 1,
   });
 
   function handleChange(e) {
@@ -114,7 +112,11 @@ function IssueForm({ university, onIssued }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!file) { toast.error("Please upload the certificate PDF"); return; }
+    if (!file) {
+      toast.error("Please upload the certificate PDF");
+      return;
+    }
+
     setLoading(true);
     setResult(null);
     try {
@@ -124,7 +126,7 @@ function IssueForm({ university, onIssued }) {
 
       const { data } = await API.post("/api/credentials/issue", fd);
       setResult(data);
-      toast.success("Certificate issued on-chain! 🎉");
+      toast.success("Certificate issued on-chain!");
       onIssued?.();
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
@@ -135,24 +137,25 @@ function IssueForm({ university, onIssued }) {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-      {/* Dropzone */}
       <div {...getRootProps()} className={`dropzone${isDragActive ? " active" : ""}`}>
         <input {...getInputProps()} />
-        <div className="dropzone-icon">📄</div>
-        {file
-          ? <p style={{ color: "#f1f5f9" }}>{file.name}</p>
-          : <p>Drag & drop the certificate PDF here, or <span style={{ color: "#818cf8" }}>click to browse</span></p>
-        }
+        <div className="dropzone-icon">PDF</div>
+        {file ? (
+          <p style={{ color: "#f1f5f9" }}>{file.name}</p>
+        ) : (
+          <p>Drag and drop the certificate PDF here, or <span style={{ color: "#818cf8" }}>click to browse</span></p>
+        )}
       </div>
 
       <div className="grid-2">
         {[
-          { name: "student_name",    label: "Student Name",       placeholder: "John Doe" },
-          { name: "register_number", label: "Register Number",    placeholder: "21CS001" },
-          { name: "degree",          label: "Degree",             placeholder: "B.Tech" },
-          { name: "branch",          label: "Branch",             placeholder: "Computer Science" },
-          { name: "issue_date",      label: "Issue Date",         placeholder: "2024-04-01", type: "date" },
-          { name: "student_wallet",  label: "Student Wallet (0x)", placeholder: "0xabc…" },
+          { name: "student_name", label: "Student Name", placeholder: "John Doe" },
+          { name: "student_email", label: "Student Email", placeholder: "student@example.com", type: "email" },
+          { name: "register_number", label: "Register Number", placeholder: "21CS001" },
+          { name: "degree", label: "Degree", placeholder: "B.Tech" },
+          { name: "branch", label: "Branch", placeholder: "Computer Science" },
+          { name: "issue_date", label: "Issue Date", placeholder: "2024-04-01", type: "date" },
+          { name: "student_wallet", label: "Student Wallet (0x)", placeholder: "0xabc..." },
         ].map(({ name, label, placeholder, type }) => (
           <div key={name} className="input-group">
             <label>{label}</label>
@@ -174,13 +177,13 @@ function IssueForm({ university, onIssued }) {
       </div>
 
       <button type="submit" className="btn btn-primary" disabled={loading} style={{ alignSelf: "flex-start" }}>
-        {loading ? <><span className="spinner" /> Issuing…</> : "🔗 Issue Certificate on-chain"}
+        {loading ? <><span className="spinner" /> Issuing...</> : "Issue Certificate on-chain"}
       </button>
 
       {result && (
         <div className="alert alert-success">
           <div>
-            <p style={{ color: "#86efac", fontWeight: 600 }}>✅ Certificate issued successfully!</p>
+            <p style={{ color: "#86efac", fontWeight: 600 }}>Certificate issued successfully!</p>
             <p style={{ fontSize: "0.8rem", marginTop: "0.5rem" }}>
               <span className="mono">Tx: {result.txHash}</span>
             </p>
@@ -191,7 +194,6 @@ function IssueForm({ university, onIssued }) {
   );
 }
 
-/* ── Issued Credentials Table ──────────────────────────── */
 function IssuedList({ refresh }) {
   const [creds, setCreds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -209,7 +211,9 @@ function IssuedList({ refresh }) {
     }
   }
 
-  useState(() => { load(); }, [refresh]);
+  useEffect(() => {
+    load();
+  }, [refresh]);
 
   async function handleRevoke(credential_hash, name) {
     if (!confirm(`Revoke certificate for ${name}? This action is irreversible on-chain.`)) return;
@@ -229,7 +233,7 @@ function IssuedList({ refresh }) {
 
   if (!creds.length) return (
     <div style={{ textAlign: "center", padding: "4rem", color: "#475569" }}>
-      <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📭</div>
+      <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>--</div>
       <p>No certificates issued yet.</p>
     </div>
   );
@@ -240,6 +244,7 @@ function IssuedList({ refresh }) {
         <thead>
           <tr>
             <th>Student</th>
+            <th>Email</th>
             <th>Reg. No</th>
             <th>Degree / Branch</th>
             <th>Issue Date</th>
@@ -251,12 +256,13 @@ function IssuedList({ refresh }) {
           {creds.map((c) => (
             <tr key={c.id}>
               <td style={{ color: "#f1f5f9", fontWeight: 500 }}>{c.student_name}</td>
+              <td>{c.student_email || "-"}</td>
               <td className="mono">{c.register_number}</td>
-              <td>{c.degree} · {c.branch}</td>
+              <td>{c.degree} / {c.branch}</td>
               <td>{c.issue_date}</td>
               <td>
                 <span className={`badge badge-${c.status === "ACTIVE" ? "active" : "revoked"}`}>
-                  {c.status === "ACTIVE" ? "✓ Active" : "✕ Revoked"}
+                  {c.status === "ACTIVE" ? "Active" : "Revoked"}
                 </span>
               </td>
               <td>
@@ -278,7 +284,6 @@ function IssuedList({ refresh }) {
   );
 }
 
-/* ── Main Portal ────────────────────────────────────────── */
 export default function UniversityPortal() {
   const [university, setUniversity] = useState(() => {
     try { return JSON.parse(localStorage.getItem("cv_uni_info")); } catch { return null; }
@@ -298,10 +303,9 @@ export default function UniversityPortal() {
   return (
     <div className="page">
       <div className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
           <div>
-            <h2>🏛️ {university.name}</h2>
+            <h2>{university.name}</h2>
             <p style={{ fontSize: "0.85rem", fontFamily: "monospace", color: "#6366f1", marginTop: "0.25rem" }}>
               {university.wallet}
             </p>
@@ -309,20 +313,19 @@ export default function UniversityPortal() {
           <button className="btn btn-outline btn-sm" onClick={handleLogout}>Logout</button>
         </div>
 
-        {/* Tabs */}
         <div className="tabs" style={{ marginBottom: "2rem" }}>
           <button className={`tab${tab === "issue" ? " active" : ""}`} onClick={() => setTab("issue")}>
-            📤 Issue Certificate
+            Issue Certificate
           </button>
           <button className={`tab${tab === "issued" ? " active" : ""}`} onClick={() => { setTab("issued"); setIssued((p) => p + 1); }}>
-            📋 Issued Certificates
+            Issued Certificates
           </button>
         </div>
 
         {tab === "issue" && (
           <div className="card">
             <h3 style={{ marginBottom: "1.5rem", color: "#f1f5f9" }}>Issue New Certificate</h3>
-            <IssueForm university={university} onIssued={() => {}} />
+            <IssueForm university={university} onIssued={() => setIssued((p) => p + 1)} />
           </div>
         )}
 

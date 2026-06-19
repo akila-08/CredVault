@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { ethers } from "ethers";
 import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import API from "../api/client";
+
+function StatusBadge({ status }) {
+  const normalized = String(status || "pending").toLowerCase();
+  const cls = `badge-${normalized}`;
+  return <span className={`badge ${cls}`}>{normalized}</span>;
+}
+
+function formatDate(value) {
+  return value ? new Date(value).toLocaleString() : "-";
+}
 
 export default function VerifyPortal() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -16,8 +25,9 @@ export default function VerifyPortal() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [ownerStatus, setOwnerStatus] = useState(null);
-  const [ownerAddr, setOwnerAddr] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestingOwnership, setRequestingOwnership] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("cv_verifier_token");
@@ -33,12 +43,14 @@ export default function VerifyPortal() {
       });
   }, []);
 
+  useEffect(() => {
+    if (authenticated) loadRequests();
+  }, [authenticated]);
+
   const onDrop = useCallback((accepted) => {
     if (accepted[0]) {
       setFile(accepted[0]);
       setResult(null);
-      setOwnerStatus(null);
-      setOwnerAddr(null);
     }
   }, []);
 
@@ -54,6 +66,23 @@ export default function VerifyPortal() {
 
   function handlePasswordChange(e) {
     setPasswordForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+  }
+
+  async function loadRequests() {
+    setRequestsLoading(true);
+    try {
+      const { data } = await API.get("/api/verification-requests/verifier");
+      setRequests(data.requests || []);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        logout();
+        toast.error("Session expired. Please log in again.");
+      } else {
+        toast.error(err.response?.data?.message || err.message);
+      }
+    } finally {
+      setRequestsLoading(false);
+    }
   }
 
   async function handleLogin(e) {
@@ -79,6 +108,7 @@ export default function VerifyPortal() {
     setLoginForm({ email: "", password: "" });
     setFile(null);
     setResult(null);
+    setRequests([]);
     setProfileOpen(false);
   }
 
@@ -115,8 +145,6 @@ export default function VerifyPortal() {
 
     setLoading(true);
     setResult(null);
-    setOwnerStatus(null);
-    setOwnerAddr(null);
     try {
       const fd = new FormData();
       fd.append("certificate", file);
@@ -134,45 +162,35 @@ export default function VerifyPortal() {
     }
   }
 
-  async function verifyOwner() {
-    if (!window.ethereum) {
-      toast.error("MetaMask not detected. The student needs MetaMask installed.");
+  async function requestOwnershipVerification() {
+    if (!result?.credentialId) {
+      toast.error("Credential metadata was not found for this certificate");
       return;
     }
-    setOwnerStatus("verifying");
+
+    setRequestingOwnership(true);
     try {
-      const expectedWallet = result?.onChain?.studentWallet?.toLowerCase();
-      if (!expectedWallet) throw new Error("No student wallet found in on-chain record");
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = await provider.getSigner();
-
-      const challenge = [
-        "CredVault Ownership Verification",
-        `Certificate: ${result.credentialHash}`,
-        "By signing, you confirm you are the rightful owner of this certificate.",
-      ].join("\n");
-
-      const signature = await signer.signMessage(challenge);
-      const recovered = ethers.verifyMessage(challenge, signature).toLowerCase();
-      setOwnerAddr(recovered);
-      setOwnerStatus(recovered === expectedWallet ? "verified" : "mismatch");
+      const { data } = await API.post("/api/verification-requests", {
+        credential_id: result.credentialId,
+      });
+      toast.success(data.alreadyExists ? "Verification request already exists" : "Verification request sent to student");
+      await loadRequests();
     } catch (err) {
-      if (err.code === 4001 || err.message?.includes("rejected") || err.message?.includes("denied")) {
-        setOwnerStatus("declined");
-      } else {
-        toast.error(err.message);
-        setOwnerStatus(null);
-      }
+      toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setRequestingOwnership(false);
     }
   }
 
   const statusConfig = {
-    VALID: { label: "Verified - Authentic Certificate", cls: "alert-success" },
+    VALID: { label: "Certificate Valid", cls: "alert-success" },
     REVOKED: { label: "Revoked - Certificate was revoked by the university", cls: "alert-warning" },
     INVALID: { label: "Invalid - Not found on blockchain", cls: "alert-error" },
   };
+
+  const currentRequest = result?.credentialId
+    ? requests.find((request) => request.credential_id === result.credentialId)
+    : null;
 
   if (!authenticated) {
     return (
@@ -204,7 +222,7 @@ export default function VerifyPortal() {
 
   return (
     <div className="page">
-      <div className="container" style={{ maxWidth: 820, paddingTop: "2rem", paddingBottom: "4rem" }}>
+      <div className="container" style={{ maxWidth: 980, paddingTop: "2rem", paddingBottom: "4rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
           <div>
             <h2>Verify a Certificate</h2>
@@ -345,6 +363,7 @@ export default function VerifyPortal() {
                           <div className="grid-2">
                             {[
                               { label: "Student", value: result.metadata.student_name },
+                              { label: "Student Email", value: result.metadata.student_email || "-" },
                               { label: "Register No.", value: result.metadata.register_number },
                               { label: "Degree", value: result.metadata.degree },
                               { label: "Branch", value: result.metadata.branch },
@@ -370,48 +389,28 @@ export default function VerifyPortal() {
                           <hr className="divider" />
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
                             <div>
-                              <p style={{ fontWeight: 600, color: "#f1f5f9", marginBottom: "0.2rem" }}>Owner Verification</p>
+                              <p style={{ fontWeight: 600, color: "#f1f5f9", marginBottom: "0.2rem" }}>Ownership Verification</p>
                               <p style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                                Ask the student to sign with their MetaMask to confirm ownership.
+                                Request approval from the student. MetaMask opens only in the Student Portal.
                               </p>
                             </div>
 
-                            {ownerStatus === null && (
+                            {currentRequest ? (
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                                <StatusBadge status={currentRequest.status} />
+                                <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>Requested {formatDate(currentRequest.created_at)}</span>
+                              </div>
+                            ) : (
                               <button
                                 className="btn btn-sm"
                                 style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)", color: "#818cf8", whiteSpace: "nowrap" }}
-                                onClick={verifyOwner}
+                                onClick={requestOwnershipVerification}
+                                disabled={requestingOwnership}
                               >
-                                Verify Owner
+                                {requestingOwnership ? <><span className="spinner" /> Sending...</> : "Request Ownership Verification"}
                               </button>
                             )}
-
-                            {ownerStatus === "verifying" && (
-                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#818cf8", fontSize: "0.875rem" }}>
-                                <span className="spinner" /> Waiting for signature...
-                              </div>
-                            )}
                           </div>
-
-                          {ownerStatus === "verified" && (
-                            <div className="alert alert-success" style={{ marginTop: "0.75rem" }}>
-                              Ownership verified. Wallet <span className="mono">{ownerAddr}</span> confirmed ownership.
-                            </div>
-                          )}
-
-                          {ownerStatus === "declined" && (
-                            <div className="alert alert-error" style={{ marginTop: "0.75rem", justifyContent: "space-between" }}>
-                              <span>The student cancelled the signature request.</span>
-                              <button className="btn btn-sm" onClick={() => { setOwnerStatus(null); setOwnerAddr(null); }}>Retry</button>
-                            </div>
-                          )}
-
-                          {ownerStatus === "mismatch" && (
-                            <div className="alert alert-warning" style={{ marginTop: "0.75rem", justifyContent: "space-between" }}>
-                              <span>Signed by <span className="mono">{ownerAddr}</span>, which does not match <span className="mono">{result.onChain.studentWallet}</span>.</span>
-                              <button className="btn btn-sm" onClick={() => { setOwnerStatus(null); setOwnerAddr(null); }}>Retry</button>
-                            </div>
-                          )}
                         </>
                       )}
                     </div>
@@ -421,7 +420,52 @@ export default function VerifyPortal() {
             })()}
           </div>
         )}
+
+        <div className="card" style={{ marginTop: "2rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+            <h3 style={{ color: "#f1f5f9" }}>Verification Requests</h3>
+            <button className="btn btn-outline btn-sm" onClick={loadRequests} disabled={requestsLoading}>
+              {requestsLoading ? <><span className="spinner" /> Refreshing...</> : "Refresh"}
+            </button>
+          </div>
+
+          {requestsLoading && !requests.length ? (
+            <div style={{ textAlign: "center", padding: "2rem", color: "#475569" }}><span className="spinner" /></div>
+          ) : requests.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "2rem", color: "#475569" }}>
+              <p>No ownership verification requests yet.</p>
+            </div>
+          ) : (
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Student Name</th>
+                    <th>Student Email</th>
+                    <th>Certificate</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Completed At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map((request) => (
+                    <tr key={request.id}>
+                      <td style={{ color: "#f1f5f9", fontWeight: 500 }}>{request.credential?.student_name || "-"}</td>
+                      <td>{request.student_email}</td>
+                      <td>{request.credential ? `${request.credential.degree} / ${request.credential.branch}` : request.credential_id}</td>
+                      <td><StatusBadge status={request.status} /></td>
+                      <td>{formatDate(request.created_at)}</td>
+                      <td>{formatDate(request.completed_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+

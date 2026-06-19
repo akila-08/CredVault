@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import supabase from "../services/supabaseService.js";
 
 dotenv.config();
 
@@ -60,6 +61,35 @@ export function requireVerifier(req, res, next) {
         next();
     } catch (err) {
         return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    }
+}
+
+// Protects student-only routes backed by Supabase Auth
+// Expects: Authorization: Bearer <supabase access token>
+export async function requireStudent(req, res, next) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ success: false, message: "No student session provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    try {
+        const { data, error } = await supabase.auth.getUser(token);
+
+        if (error || !data?.user?.email) {
+            return res.status(401).json({ success: false, message: "Invalid or expired student session" });
+        }
+
+        req.student = {
+            id: data.user.id,
+            email: data.user.email.toLowerCase(),
+        };
+
+        next();
+    } catch (err) {
+        return res.status(401).json({ success: false, message: "Invalid or expired student session" });
     }
 }
 

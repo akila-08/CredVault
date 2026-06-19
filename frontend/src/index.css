@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-/* ── Design Tokens ───────────────────────────────────────────── */
+/* â”€â”€ Design Tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 :root {
   --bg-primary:    #0a0b14;
   --bg-secondary:  #0f1022;
@@ -30,7 +30,7 @@
   --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
 }
 
-/* ── Reset ───────────────────────────────────────────────────── */
+/* â”€â”€ Reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { scroll-behavior: smooth; }
@@ -43,22 +43,22 @@ body {
   overflow-x: hidden;
 }
 
-/* ── Scrollbar ───────────────────────────────────────────────── */
+/* â”€â”€ Scrollbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb { background: var(--purple-dark); border-radius: 3px; }
 
-/* ── Typography ─────────────────────────────────────────────── */
+/* â”€â”€ Typography â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; line-height: 1.1; }
 h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 700; }
 h3 { font-size: 1.25rem; font-weight: 600; }
 p  { line-height: 1.65; color: var(--text-secondary); }
 
-/* ── Layout ─────────────────────────────────────────────────── */
+/* â”€â”€ Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
 .page { min-height: 100vh; padding-top: 80px; }
 
-/* ── Gradient text ───────────────────────────────────────────── */
+/* â”€â”€ Gradient text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .gradient-text {
   background: linear-gradient(135deg, var(--purple-light), var(--teal));
   -webkit-background-clip: text;
@@ -66,7 +66,7 @@ p  { line-height: 1.65; color: var(--text-secondary); }
   background-clip: text;
 }
 
-/* ── Buttons ─────────────────────────────────────────────────── */
+/* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -114,7 +114,7 @@ p  { line-height: 1.65; color: var(--text-secondary); }
 .btn-sm { padding: 0.45rem 1rem; font-size: 0.8125rem; border-radius: var(--radius-sm); }
 .btn-full { width: 100%; }
 
-/* ── Glass Card ─────────────────────────────────────────────── */
+/* â”€â”€ Glass Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -129,7 +129,7 @@ p  { line-height: 1.65; color: var(--text-secondary); }
   background: rgba(99,102,241,0.12);
 }
 
-/* ── Form inputs ─────────────────────────────────────────────── */
+/* â”€â”€ Form inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .input-group { display: flex; flex-direction: column; gap: 0.5rem; }
 .input-group label { font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); }
 .input {
@@ -147,11 +147,11 @@ p  { line-height: 1.65; color: var(--text-secondary); }
 .input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
 .input::placeholder { color: var(--text-muted); }
 
-/* ── Grid ────────────────────────────────────────────────────── */
+/* â”€â”€ Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
 
-/* ── Status badges ───────────────────────────────────────────── */
+/* â”€â”€ Status badges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -167,8 +167,11 @@ p  { line-height: 1.65; color: var(--text-secondary); }
 .badge-revoked { background: rgba(244,63,94,0.15);  color: var(--rose); }
 .badge-valid   { background: rgba(34,197,94,0.15);  color: var(--green); }
 .badge-invalid { background: rgba(244,63,94,0.15);  color: var(--rose); }
+.badge-pending { background: rgba(245,158,11,0.15); color: var(--amber); }
+.badge-approved { background: rgba(34,197,94,0.15); color: var(--green); }
+.badge-rejected, .badge-expired { background: rgba(244,63,94,0.15); color: var(--rose); }
 
-/* ── Tabs ────────────────────────────────────────────────────── */
+/* â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tabs { display: flex; gap: 0.25rem; background: rgba(255,255,255,0.03); padding: 0.3rem; border-radius: var(--radius-md); border: 1px solid var(--border); }
 .tab {
   flex: 1;
@@ -186,7 +189,7 @@ p  { line-height: 1.65; color: var(--text-secondary); }
 .tab.active { background: var(--purple); color: #fff; box-shadow: 0 2px 12px rgba(99,102,241,0.4); }
 .tab:hover:not(.active) { color: var(--text-primary); background: rgba(255,255,255,0.05); }
 
-/* ── Table ───────────────────────────────────────────────────── */
+/* â”€â”€ Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .table-wrapper { overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border); }
 table { width: 100%; border-collapse: collapse; }
 th { padding: 0.875rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; background: rgba(255,255,255,0.03); }
@@ -194,7 +197,7 @@ td { padding: 0.875rem 1rem; font-size: 0.9rem; border-top: 1px solid var(--bord
 tr:hover td { background: rgba(255,255,255,0.025); }
 .mono { font-family: monospace; font-size: 0.8rem; }
 
-/* ── Dropzone ────────────────────────────────────────────────── */
+/* â”€â”€ Dropzone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .dropzone {
   border: 2px dashed var(--border);
   border-radius: var(--radius-md);
@@ -207,20 +210,20 @@ tr:hover td { background: rgba(255,255,255,0.025); }
 .dropzone:hover, .dropzone.active { border-color: var(--purple); background: rgba(99,102,241,0.06); }
 .dropzone-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
 
-/* ── Section spacing ─────────────────────────────────────────── */
+/* â”€â”€ Section spacing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .section { padding: 5rem 0; }
 .section-sm { padding: 2.5rem 0; }
 
-/* ── Divider ─────────────────────────────────────────────────── */
+/* â”€â”€ Divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
 
-/* ── Alert boxes ─────────────────────────────────────────────── */
+/* â”€â”€ Alert boxes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .alert { padding: 1rem 1.25rem; border-radius: var(--radius-md); font-size: 0.9rem; display: flex; align-items: flex-start; gap: 0.75rem; }
 .alert-success { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.25);  color: #86efac; }
 .alert-error   { background: rgba(244,63,94,0.1);  border: 1px solid rgba(244,63,94,0.25);  color: #fda4af; }
 .alert-warning { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); color: #fcd34d; }
 
-/* ── Loading spinner ─────────────────────────────────────────── */
+/* â”€â”€ Loading spinner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
   width: 20px; height: 20px;
@@ -231,16 +234,17 @@ tr:hover td { background: rgba(255,255,255,0.025); }
   display: inline-block;
 }
 
-/* ── Glow backgrounds ────────────────────────────────────────── */
+/* â”€â”€ Glow backgrounds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .glow-purple { position: absolute; width: 400px; height: 400px; background: radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%); border-radius: 50%; pointer-events: none; }
 .glow-teal   { position: absolute; width: 350px; height: 350px; background: radial-gradient(circle, rgba(45,212,191,0.08), transparent 70%); border-radius: 50%; pointer-events: none; }
 
-/* ── Fade-in animation ───────────────────────────────────────── */
+/* â”€â”€ Fade-in animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 .fade-up { animation: fadeUp 0.5s ease forwards; }
 
-/* ── Responsive ──────────────────────────────────────────────── */
+/* â”€â”€ Responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 768px) {
   .hide-mobile { display: none; }
   .container { padding: 0 1rem; }
 }
+
