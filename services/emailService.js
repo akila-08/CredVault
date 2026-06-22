@@ -2,7 +2,15 @@ import SibApiV3Sdk from "sib-api-v3-sdk";
 
 function getEmailClient() {
   const client = SibApiV3Sdk.ApiClient.instance;
-  console.log("BREVO_API_KEY =", process.env.BREVO_API_KEY);
+
+  console.log(
+    "BREVO_API_KEY =",
+    process.env.BREVO_API_KEY
+  );
+
+  client.authentications["api-key"].apiKey =
+    process.env.BREVO_API_KEY;
+
   return new SibApiV3Sdk.TransactionalEmailsApi();
 }
 

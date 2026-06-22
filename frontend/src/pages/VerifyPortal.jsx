@@ -9,8 +9,25 @@ function StatusBadge({ status }) {
   return <span className={`badge ${cls}`}>{normalized}</span>;
 }
 
-function formatDate(value) {
+/*function formatDate(value) {
   return value ? new Date(value).toLocaleString() : "-";
+}*/
+function formatDate(value) {
+  if (!value) return "-";
+
+  const utcValue = value.endsWith("Z")
+    ? value
+    : `${value}Z`;
+
+  return new Date(utcValue).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export default function VerifyPortal() {
@@ -272,7 +289,7 @@ toast.success("Verifier login successful");
       </div>
     );
   }
-
+  console.log("REQUESTS:", requests);
   return (
     <div className="page">
       <div className="container" style={{ maxWidth: 980, paddingTop: "2rem", paddingBottom: "4rem" }}>
