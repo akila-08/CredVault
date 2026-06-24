@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import API from "../api/client";
+import adminBg from "../assets/admin.png";
+
+const portalBg = {
+  backgroundImage: `linear-gradient(135deg, rgba(7,20,60,0.72) 0%, rgba(10,30,80,0.65) 100%), url(${adminBg})`,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundAttachment: "fixed",
+  backgroundColor: "#07142a",
+  minHeight: "100vh",
+};
 
 export default function AdminPanel() {
   const [adminKey, setAdminKey] = useState("");
@@ -36,7 +46,7 @@ export default function AdminPanel() {
     setLoading(true);
     try {
       await API.get("/api/admin/verify-key", { headers: { "x-admin-key": adminKey } });
-      
+
       setAuthenticated(true);
       toast.success("Admin access granted");
     } catch {
@@ -147,18 +157,19 @@ export default function AdminPanel() {
   }
 
   function logout() {
-  setAdminKey("");
-  setAuthenticated(false);
-  setActiveSection(null);
-}
+    setAdminKey("");
+    setAuthenticated(false);
+    setActiveSection(null);
+  }
 
   if (!authenticated) {
     return (
-      <div style={{ minHeight: "calc(100vh - 70px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+      <div style={{ ...portalBg, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
         <div style={{ maxWidth: 420, width: "100%" }}>
           <div className="card" style={{ padding: "2.5rem", textAlign: "center" }}>
-            <h2 style={{ marginBottom: "0.5rem" }}>Admin Panel</h2>
-            <p style={{ marginBottom: "2rem" }}>Enter the admin API key to manage universities and verifiers.</p>
+            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>⚙️</div>
+            <h2 style={{ marginBottom: "0.5rem", color: "#f0f6ff" }}>Admin Panel</h2>
+            <p style={{ marginBottom: "2rem", color: "#93c5fd" }}>Enter the admin API key to manage universities and verifiers.</p>
             <form onSubmit={handleAuth} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <input
                 className="input"
@@ -167,6 +178,7 @@ export default function AdminPanel() {
                 value={adminKey}
                 onChange={(e) => setAdminKey(e.target.value)}
                 required
+                style={{ color: "#ffffff", caretColor: "#60a5fa" }}
               />
               <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
                 {loading ? <><span className="spinner" /> Verifying...</> : "Unlock Admin Panel"}
@@ -179,7 +191,7 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="page">
+    <div className="page" style={portalBg}>
       <div className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
           <div>

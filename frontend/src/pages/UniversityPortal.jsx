@@ -3,6 +3,16 @@ import { ethers } from "ethers";
 import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import API from "../api/client";
+import universityBg from "../assets/university.png";
+
+const portalBg = {
+  backgroundImage: `linear-gradient(135deg, rgba(7,20,60,0.72) 0%, rgba(10,30,80,0.65) 100%), url(${universityBg})`,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundAttachment: "fixed",
+  backgroundColor: "#07142a",
+  minHeight: "100vh",
+};
 
 function truncate(addr) {
   return addr ? addr.slice(0, 6) + "..." + addr.slice(-4) : "";
@@ -51,15 +61,15 @@ function LoginStep({ onLogin }) {
       });
 
       localStorage.setItem("cv_uni_token", loginRes.token);
-localStorage.setItem("cv_uni_info", JSON.stringify(loginRes.university));
+      localStorage.setItem("cv_uni_info", JSON.stringify(loginRes.university));
 
-localStorage.setItem(
-  "cv_uni_expiry",
-  (Date.now() + 24 * 60 * 60 * 1000).toString()
-);
+      localStorage.setItem(
+        "cv_uni_expiry",
+        (Date.now() + 24 * 60 * 60 * 1000).toString()
+      );
 
-toast.success(`Welcome, ${loginRes.university.name}!`);
-onLogin(loginRes.university);
+      toast.success(`Welcome, ${loginRes.university.name}!`);
+      onLogin(loginRes.university);
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     } finally {
@@ -68,19 +78,19 @@ onLogin(loginRes.university);
   }
 
   return (
-    <div style={{ minHeight: "calc(100vh - 70px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+    <div style={{ ...portalBg, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
       <div style={{ maxWidth: 440, width: "100%" }}>
         <div className="card" style={{ textAlign: "center", padding: "3rem 2.5rem" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>CV</div>
-          <h2 style={{ marginBottom: "0.5rem" }}>University Portal</h2>
-          <p style={{ marginBottom: "2rem" }}>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem", color: "#60a5fa" }}>🏛️</div>
+          <h2 style={{ marginBottom: "0.5rem", color: "#f0f6ff" }}>University Portal</h2>
+          <p style={{ marginBottom: "2rem", color: "#93c5fd" }}>
             Connect your registered wallet to issue and manage student certificates.
             You only need to sign <strong style={{ color: "#f1f5f9" }}>once</strong> to get a 24-hour session.
           </p>
           <button className="btn btn-primary btn-full" onClick={handleConnect} disabled={loading}>
             {loading ? <><span className="spinner" /> Connecting...</> : "Connect Wallet"}
           </button>
-          <p style={{ fontSize: "0.8rem", marginTop: "1rem", color: "#475569" }}>
+          <p style={{ fontSize: "0.8rem", marginTop: "1rem", color: "#64748b" }}>
             Only wallets registered by admin can log in
           </p>
         </div>
@@ -298,49 +308,49 @@ export default function UniversityPortal() {
   const [issued, setIssued] = useState(0);
 
   useEffect(() => {
-  const checkSessionExpiry = () => {
-    const expiry =
-      localStorage.getItem("cv_uni_expiry");
+    const checkSessionExpiry = () => {
+      const expiry =
+        localStorage.getItem("cv_uni_expiry");
 
-    if (!expiry) return;
+      if (!expiry) return;
 
-    if (Date.now() > Number(expiry)) {
-      localStorage.removeItem("cv_uni_token");
-      localStorage.removeItem("cv_uni_info");
-      localStorage.removeItem("cv_uni_expiry");
+      if (Date.now() > Number(expiry)) {
+        localStorage.removeItem("cv_uni_token");
+        localStorage.removeItem("cv_uni_info");
+        localStorage.removeItem("cv_uni_expiry");
 
-      toast.error(
-        "Session expired. Please login again."
-      );
+        toast.error(
+          "Session expired. Please login again."
+        );
 
-      setUniversity(null);
-    }
-  };
+        setUniversity(null);
+      }
+    };
 
-  checkSessionExpiry();
+    checkSessionExpiry();
 
-  const interval = setInterval(
-    checkSessionExpiry,
-    10000
-  );
+    const interval = setInterval(
+      checkSessionExpiry,
+      10000
+    );
 
-  return () => clearInterval(interval);
-}, []);
+    return () => clearInterval(interval);
+  }, []);
 
   function handleLogout() {
-  localStorage.removeItem("cv_uni_token");
-  localStorage.removeItem("cv_uni_info");
-  localStorage.removeItem("cv_uni_expiry");
+    localStorage.removeItem("cv_uni_token");
+    localStorage.removeItem("cv_uni_info");
+    localStorage.removeItem("cv_uni_expiry");
 
-  setUniversity(null);
+    setUniversity(null);
 
-  toast("Logged out");
-}
+    toast("Logged out");
+  }
 
   if (!university) return <LoginStep onLogin={setUniversity} />;
 
   return (
-    <div className="page">
+    <div className="page" style={portalBg}>
       <div className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
           <div>

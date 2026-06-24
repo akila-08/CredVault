@@ -3,6 +3,16 @@ import { createClient } from "@supabase/supabase-js";
 import { ethers } from "ethers";
 import toast from "react-hot-toast";
 import API from "../api/client";
+import studentBg from "../assets/student.png";
+
+const portalBg = {
+  backgroundImage: `linear-gradient(135deg, rgba(7,20,60,0.72) 0%, rgba(10,30,80,0.65) 100%), url(${studentBg})`,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundAttachment: "fixed",
+  backgroundColor: "#07142a",
+  minHeight: "100vh",
+};
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -65,22 +75,22 @@ function AuthPanel({ onLogin }) {
 
       if (result.error) throw result.error;
 
-if (mode === "signup" && !result.data.session) {
-  toast.success("Check your email to confirm your account!");
-  setMode("login");
-  return;
-}
+      if (mode === "signup" && !result.data.session) {
+        toast.success("Check your email to confirm your account!");
+        setMode("login");
+        return;
+      }
 
-localStorage.setItem(
-  "loginTime",
-  Date.now().toString()
-);
-localStorage.setItem(
-  "loginExpiry",
-  (Date.now() + 24 * 60 * 60 * 1000).toString()
-);
-onLogin(result.data.user);
-toast.success("Welcome to CredVault!");
+      localStorage.setItem(
+        "loginTime",
+        Date.now().toString()
+      );
+      localStorage.setItem(
+        "loginExpiry",
+        (Date.now() + 24 * 60 * 60 * 1000).toString()
+      );
+      onLogin(result.data.user);
+      toast.success("Welcome to CredVault!");
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -89,13 +99,13 @@ toast.success("Welcome to CredVault!");
   }
 
   return (
-    <div style={{ minHeight: "calc(100vh - 70px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+    <div style={{ ...portalBg, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
       <div style={{ maxWidth: 420, width: "100%" }}>
         <div className="card" style={{ padding: "2.5rem" }}>
           <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>CV</div>
-            <h2>Student Portal</h2>
-            <p style={{ marginTop: "0.5rem" }}>View certificates issued to your wallet</p>
+            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎓</div>
+            <h2 style={{ color: "#f0f6ff" }}>Student Portal</h2>
+            <p style={{ marginTop: "0.5rem", color: "#93c5fd" }}>View certificates issued to your wallet</p>
           </div>
 
           <div className="tabs" style={{ marginBottom: "1.5rem" }}>
@@ -293,29 +303,29 @@ function Dashboard({ user, onLogout }) {
   const [rejecting, setRejecting] = useState(null);
 
   useEffect(() => {
-  loadRequests();
-  loadCertificates();
-}, []);
+    loadRequests();
+    loadCertificates();
+  }, []);
 
   async function loadCertificates() {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const { data, error } = await supabase
-      .from("credentials")
-      .select("*")
-      .eq("student_email", user.email);
+      const { data, error } = await supabase
+        .from("credentials")
+        .select("*")
+        .eq("student_email", user.email);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    setCreds(data || []);
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to load certificates");
-  } finally {
-    setLoading(false);
+      setCreds(data || []);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load certificates");
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   async function loadRequests() {
     setRequestsLoading(true);
@@ -381,61 +391,60 @@ function Dashboard({ user, onLogout }) {
     }
   }*/
   async function rejectRequest(request) {
-  if (!confirm("Decline this ownership verification request?")) return;
+    if (!confirm("Decline this ownership verification request?")) return;
 
-  setRejecting(request.id);
+    setRejecting(request.id);
 
-  try {
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
 
-    await provider.send("eth_requestAccounts", []);
+      await provider.send("eth_requestAccounts", []);
 
-    const signer = await provider.getSigner();
+      const signer = await provider.getSigner();
 
-    const walletAddress = await signer.getAddress();
+      const walletAddress = await signer.getAddress();
 
-    const message = [
-      "CredVault Ownership Verification",
-      `Request ID: ${request.id}`,
-      `Credential ID: ${request.credential_id}`,
-      `Credential Hash: ${
-        request.credential?.credential_hash ||
+      const message = [
+        "CredVault Ownership Verification",
+        `Request ID: ${request.id}`,
+        `Credential ID: ${request.credential_id}`,
+        `Credential Hash: ${request.credential?.credential_hash ||
         request.credential?.document_hash ||
         ""
-      }`,
-      `Student Email: ${user.email}`,
-      "I reject this ownership verification request.",
-    ].join("\n");
+        }`,
+        `Student Email: ${user.email}`,
+        "I reject this ownership verification request.",
+      ].join("\n");
 
-    const signature = await signer.signMessage(message);
+      const signature = await signer.signMessage(message);
 
-    const config = await getStudentAuthConfig();
+      const config = await getStudentAuthConfig();
 
-    await API.post(
-      `/api/verification-requests/${request.id}/reject`,
-      {
-        wallet_address: walletAddress,
-        signature,
-        message,
-      },
-      config
-    );
+      await API.post(
+        `/api/verification-requests/${request.id}/reject`,
+        {
+          wallet_address: walletAddress,
+          signature,
+          message,
+        },
+        config
+      );
 
-    toast.success("Ownership request declined");
+      toast.success("Ownership request declined");
 
-    await loadRequests();
-  } catch (err) {
-    toast.error(err.response?.data?.message || err.message);
-  } finally {
-    setRejecting(null);
+      await loadRequests();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setRejecting(null);
+    }
   }
-}
 
 
-  
+
 
   return (
-    <div className="page">
+    <div className="page" style={portalBg}>
       <div className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", gap: "1rem", flexWrap: "wrap" }}>
           <div>
@@ -455,27 +464,27 @@ function Dashboard({ user, onLogout }) {
           onRefresh={loadRequests}
         />
 
-        
+
 
         {loading ? (
-  <div style={{ textAlign: "center", padding: "2rem" }}>
-    <span className="spinner" />
-  </div>
-) : creds.length === 0 ? (
-  <div style={{ textAlign: "center", padding: "4rem", color: "#475569" }}>
-    <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📭</div>
-    <p>No certificates found.</p>
-  </div>
-) : (
-  <>
+          <div style={{ textAlign: "center", padding: "2rem" }}>
+            <span className="spinner" />
+          </div>
+        ) : creds.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "4rem", color: "#475569" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📭</div>
+            <p>No certificates found.</p>
+          </div>
+        ) : (
+          <>
 
-    <div className="grid-2">
-      {creds.map((c) => (
-        <CredCard key={c.id} cred={c} />
-      ))}
-    </div>
-  </>
-)}
+            <div className="grid-2">
+              {creds.map((c) => (
+                <CredCard key={c.id} cred={c} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -486,73 +495,71 @@ export default function StudentPortal() {
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-  const checkSessionExpiry = async () => {
-    const loginExpiry =
-      localStorage.getItem("loginExpiry");
+    const checkSessionExpiry = async () => {
+      const loginExpiry =
+        localStorage.getItem("loginExpiry");
 
-    if (!loginExpiry) return;
+      if (!loginExpiry) return;
 
-    if (Date.now() > Number(loginExpiry)) {
-      await supabase.auth.signOut();
+      if (Date.now() > Number(loginExpiry)) {
+        await supabase.auth.signOut();
 
-      localStorage.removeItem("loginTime");
-      localStorage.removeItem("loginExpiry");
+        localStorage.removeItem("loginTime");
+        localStorage.removeItem("loginExpiry");
 
-      toast.error(
-        "Session expired. Please login again."
-      );
+        toast.error(
+          "Session expired. Please login again."
+        );
 
-      setUser(null);
-    }
-  };
+        setUser(null);
+      }
+    };
 
-  checkSessionExpiry();
+    checkSessionExpiry();
 
-  const interval = setInterval(
-    checkSessionExpiry,
-    10000 // every 10 seconds
-  );
-
-  supabase.auth
-    .getSession()
-    .then(({ data }) =>
-      setUser(data.session?.user || null)
-    )
-    .finally(() =>
-      setCheckingSession(false)
+    const interval = setInterval(
+      checkSessionExpiry,
+      10000 // every 10 seconds
     );
 
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange(
-    (_event, session) => {
-      setUser(session?.user || null);
-    }
-  );
+    supabase.auth
+      .getSession()
+      .then(({ data }) =>
+        setUser(data.session?.user || null)
+      )
+      .finally(() =>
+        setCheckingSession(false)
+      );
 
-  return () => {
-    clearInterval(interval);
-    subscription.unsubscribe();
-  };
-}, []);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+
+    return () => {
+      clearInterval(interval);
+      subscription.unsubscribe();
+    };
+  }, []);
 
   async function handleLogout() {
-  await supabase.auth.signOut();
+    await supabase.auth.signOut();
 
-  localStorage.removeItem("loginTime");
-  localStorage.removeItem("loginExpiry");
+    localStorage.removeItem("loginTime");
+    localStorage.removeItem("loginExpiry");
 
-  setUser(null);
+    setUser(null);
 
-  toast("Logged out");
-}
+    toast("Logged out");
+  }
 
   if (checkingSession) {
     return (
-      <div className="page">
-        <div className="container" style={{ paddingTop: "4rem", textAlign: "center", color: "#475569" }}>
-          <span className="spinner" />
-        </div>
+      <div style={{ ...portalBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span className="spinner" />
       </div>
     );
   }
@@ -560,5 +567,3 @@ export default function StudentPortal() {
   if (!user) return <AuthPanel onLogin={setUser} />;
   return <Dashboard user={user} onLogout={handleLogout} />;
 }
-
-

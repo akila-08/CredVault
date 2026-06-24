@@ -2,6 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import API from "../api/client";
+import verifierBg from "../assets/verifier.png";
+
+const portalBg = {
+  backgroundImage: `linear-gradient(135deg, rgba(7,20,60,0.72) 0%, rgba(10,30,80,0.65) 100%), url(${verifierBg})`,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundAttachment: "fixed",
+  backgroundColor: "#07142a",
+  minHeight: "100vh",
+};
 
 function StatusBadge({ status }) {
   const normalized = String(status || "pending").toLowerCase();
@@ -47,55 +57,55 @@ export default function VerifyPortal() {
   const [requestingOwnership, setRequestingOwnership] = useState(false);
 
   useEffect(() => {
-  const checkSessionExpiry = () => {
-    const expiry =
-      localStorage.getItem("cv_verifier_expiry");
+    const checkSessionExpiry = () => {
+      const expiry =
+        localStorage.getItem("cv_verifier_expiry");
 
-    if (!expiry) return;
+      if (!expiry) return;
 
-    if (Date.now() > Number(expiry)) {
-      localStorage.removeItem("cv_verifier_token");
-      localStorage.removeItem("cv_verifier_expiry");
+      if (Date.now() > Number(expiry)) {
+        localStorage.removeItem("cv_verifier_token");
+        localStorage.removeItem("cv_verifier_expiry");
 
-      setAuthenticated(false);
-      setVerifier(null);
+        setAuthenticated(false);
+        setVerifier(null);
 
-      toast.error(
-        "Session expired. Please login again."
-      );
+        toast.error(
+          "Session expired. Please login again."
+        );
+      }
+    };
+
+    checkSessionExpiry();
+
+    const interval = setInterval(
+      checkSessionExpiry,
+      10000
+    );
+
+    const token =
+      localStorage.getItem("cv_verifier_token");
+
+    if (!token) {
+      return () => clearInterval(interval);
     }
-  };
 
-  checkSessionExpiry();
+    setAuthenticated(true);
 
-  const interval = setInterval(
-    checkSessionExpiry,
-    10000
-  );
+    API.get("/api/verifiers/profile")
+      .then(({ data }) => {
+        setVerifier(data.verifier);
+      })
+      .catch(() => {
+        localStorage.removeItem("cv_verifier_token");
+        localStorage.removeItem("cv_verifier_expiry");
 
-  const token =
-    localStorage.getItem("cv_verifier_token");
+        setAuthenticated(false);
+        setVerifier(null);
+      });
 
-  if (!token) {
     return () => clearInterval(interval);
-  }
-
-  setAuthenticated(true);
-
-  API.get("/api/verifiers/profile")
-    .then(({ data }) => {
-      setVerifier(data.verifier);
-    })
-    .catch(() => {
-      localStorage.removeItem("cv_verifier_token");
-      localStorage.removeItem("cv_verifier_expiry");
-
-      setAuthenticated(false);
-      setVerifier(null);
-    });
-
-  return () => clearInterval(interval);
-}, []);
+  }, []);
 
   useEffect(() => {
     if (authenticated) loadRequests();
@@ -146,15 +156,15 @@ export default function VerifyPortal() {
       const { data } = await API.post("/api/verifiers/login", loginForm);
       localStorage.setItem("cv_verifier_token", data.token);
 
-localStorage.setItem(
-  "cv_verifier_expiry",
-  (Date.now() + 24 * 60 * 60 * 1000).toString()
-);
+      localStorage.setItem(
+        "cv_verifier_expiry",
+        (Date.now() + 24 * 60 * 60 * 1000).toString()
+      );
 
-setVerifier(data.verifier);
-setAuthenticated(true);
+      setVerifier(data.verifier);
+      setAuthenticated(true);
 
-toast.success("Verifier login successful");
+      toast.success("Verifier login successful");
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     } finally {
@@ -163,24 +173,24 @@ toast.success("Verifier login successful");
   }
 
   function logout() {
-  localStorage.removeItem("cv_verifier_token");
-  localStorage.removeItem("cv_verifier_expiry");
+    localStorage.removeItem("cv_verifier_token");
+    localStorage.removeItem("cv_verifier_expiry");
 
-  setAuthenticated(false);
-  setVerifier(null);
+    setAuthenticated(false);
+    setVerifier(null);
 
-  setLoginForm({
-    email: "",
-    password: "",
-  });
+    setLoginForm({
+      email: "",
+      password: "",
+    });
 
-  setFile(null);
-  setResult(null);
-  setRequests([]);
-  setProfileOpen(false);
+    setFile(null);
+    setResult(null);
+    setRequests([]);
+    setProfileOpen(false);
 
-  toast("Logged out");
-}
+    toast("Logged out");
+  }
 
   async function submitPasswordChange(e) {
     e.preventDefault();
@@ -264,12 +274,13 @@ toast.success("Verifier login successful");
 
   if (!authenticated) {
     return (
-      <div className="page">
+      <div className="page" style={portalBg}>
         <div className="container" style={{ maxWidth: 460, paddingTop: "4rem", paddingBottom: "4rem" }}>
           <div className="card" style={{ padding: "2.5rem" }}>
             <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-              <h2>Verifier Login</h2>
-              <p style={{ marginTop: "0.5rem" }}>Use the email and password sent by the admin.</p>
+              <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🔍</div>
+              <h2 style={{ color: "#f0f6ff" }}>Verifier Login</h2>
+              <p style={{ marginTop: "0.5rem", color: "#93c5fd" }}>Use the email and password sent by the admin.</p>
             </div>
             <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div className="input-group">
@@ -291,7 +302,7 @@ toast.success("Verifier login successful");
   }
   console.log("REQUESTS:", requests);
   return (
-    <div className="page">
+    <div className="page" style={portalBg}>
       <div className="container" style={{ maxWidth: 980, paddingTop: "2rem", paddingBottom: "4rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
           <div>
@@ -538,4 +549,3 @@ toast.success("Verifier login successful");
     </div>
   );
 }
-
