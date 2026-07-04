@@ -25,7 +25,7 @@ export default function Navbar() {
 
     background: active
       ? "linear-gradient(135deg, #1d4ed8, #3b82f6)"
-      : "rgba(15, 40, 90, 0.72)",
+      : "#263868",
 
     border: active
       ? "1px solid #60a5fa"

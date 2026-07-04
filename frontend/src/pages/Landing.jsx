@@ -62,7 +62,7 @@ export default function Landing() {
               <Link to="/university" className="btn btn-primary" style={{ fontSize: "1rem" }}>
                 🏛️ University Portal
               </Link>
-              <Link to="/verify" className="btn btn-outline" style={{ fontSize: "1rem", color: "#1e3a8a", borderColor: "rgba(30,58,138,0.4)" }}>
+              <Link to="/verify" className="btn btn-outline" style={{ fontSize: "1rem", color: "#ffffff", borderColor: "rgba(30,58,138,0.4)" }}>
                 🔍 Verify a Certificate
               </Link>
             </div>
@@ -117,7 +117,7 @@ export default function Landing() {
                 }}>{card.icon}</div>
                 <h3 style={{ color: "#0c1445" }}>{card.title}</h3>
                 <p style={{ fontSize: "0.9rem", flex: 1, color: "#1e293b" }}>{card.desc}</p>
-                <Link to={card.to} className="btn btn-outline btn-sm" style={{ marginTop: "auto", color: "#1e3a8a", borderColor: "rgba(30,58,138,0.35)" }}>
+                <Link to={card.to} className="btn btn-outline btn-sm" style={{ marginTop: "auto", color: "#ffffff", borderColor: "rgba(30,58,138,0.35)" }}>
                   {card.cta} →
                 </Link>
               </div>
