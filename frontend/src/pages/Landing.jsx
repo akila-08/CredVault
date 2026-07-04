@@ -18,8 +18,14 @@ export default function Landing() {
         <div className="glow-teal" style={{ bottom: "20%", right: "-5%" }} />
 
         {/* HERO: full-width, left-aligned, no auto margin centering */}
-        <div style={{ width: "100%", paddingLeft: "4rem", paddingRight: "2rem", position: "relative", zIndex: 1 }}>
-          <div style={{ maxWidth: "640px" }}>
+        <div
+  className="hero-container"
+  style={{
+    position: "relative",
+    zIndex: 1,
+  }}
+>
+          <div className="hero-content">
             {/* Badge */}
             <div style={{
               display: "inline-flex",
@@ -58,7 +64,7 @@ export default function Landing() {
               no calls, no paperwork, just cryptographic proof.
             </p>
 
-            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+            <div className="hero-buttons">
               <Link to="/university" className="btn btn-primary" style={{ fontSize: "1rem" }}>
                 🏛️ University Portal
               </Link>
@@ -72,8 +78,8 @@ export default function Landing() {
 
       {/* ── Role Cards ───────────────────────────────────────── */}
       <section className="section" style={{ background: "rgba(255,255,255,0.2)" }}>
-        <div style={{ paddingLeft: "4rem", paddingRight: "2rem" }}>
-          <div style={{ textAlign: "left", marginBottom: "3.5rem" }}>
+        <div className="portal-container">
+          <div className="portal-heading">
             <h2 style={{ color: "#0c1445" }}>Choose Your Portal</h2>
             <p style={{ marginTop: "0.75rem", color: "#1e293b", fontWeight: 500 }}>
               Each role has a dedicated, purpose-built interface

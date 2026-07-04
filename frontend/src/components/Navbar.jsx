@@ -83,14 +83,7 @@ export default function Navbar() {
       </Link>
 
       {/* Desktop Links */}
-      <div
-        className="hide-mobile"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.7rem",
-        }}
-      >
+      <div className="desktop-nav">
         {NAV_LINKS.map(({ to, label, icon }) => (
           <Link
             key={to}
@@ -115,18 +108,10 @@ export default function Navbar() {
 
       {/* Hamburger */}
       <button
-        onClick={() => setMenuOpen((p) => !p)}
-        className="show-mobile"
-        aria-label="Menu"
-        style={{
-          display: "none",
-          background: "none",
-          border: "none",
-          color: "#1e293b",
-          fontSize: "1.5rem",
-          cursor: "pointer",
-        }}
-      >
+  onClick={() => setMenuOpen((p) => !p)}
+  className="mobile-menu-btn"
+  aria-label="Menu"
+>
         ☰
       </button>
 

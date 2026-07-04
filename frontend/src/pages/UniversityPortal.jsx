@@ -192,7 +192,11 @@ function IssueForm({ university, onIssued }) {
         <strong>Issuing as:</strong> {university.name} ({truncate(university.wallet)})
       </div>
 
-      <button type="submit" className="btn btn-primary" disabled={loading} style={{ alignSelf: "flex-start" }}>
+      <button
+type="submit"
+className="btn btn-primary issue-btn"
+disabled={loading}
+>
         {loading ? <><span className="spinner" /> Issuing...</> : "Issue Certificate on-chain"}
       </button>
 
@@ -352,17 +356,22 @@ export default function UniversityPortal() {
   return (
     <div className="page" style={portalBg}>
       <div className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
+        <div className="portal-header">
           <div>
             <h2>{university.name}</h2>
             <p style={{ fontSize: "0.85rem", fontFamily: "monospace", color: "#6366f1", marginTop: "0.25rem" }}>
               {university.wallet}
             </p>
           </div>
-          <button className="btn btn-outline btn-sm" onClick={handleLogout}>Logout</button>
+          <button
+  className="btn btn-outline btn-sm logout-btn"
+  onClick={handleLogout}
+>
+  Logout
+</button>
         </div>
 
-        <div className="tabs" style={{ marginBottom: "2rem" }}>
+        <div className="tabs portal-tabs">
           <button className={`tab${tab === "issue" ? " active" : ""}`} onClick={() => setTab("issue")}>
             Issue Certificate
           </button>
@@ -372,14 +381,14 @@ export default function UniversityPortal() {
         </div>
 
         {tab === "issue" && (
-          <div className="card">
+          <div className="card portal-card">
             <h3 style={{ marginBottom: "1.5rem", color: "#f1f5f9" }}>Issue New Certificate</h3>
             <IssueForm university={university} onIssued={() => setIssued((p) => p + 1)} />
           </div>
         )}
 
         {tab === "issued" && (
-          <div className="card">
+          <div className="card portal-card">
             <h3 style={{ marginBottom: "1.5rem", color: "#f1f5f9" }}>Certificates Issued by {university.name}</h3>
             <IssuedList refresh={issued} />
           </div>

@@ -564,49 +564,79 @@ tr:hover td {
   }
 }
 
-/* =========================
-   Mobile Responsive
-========================= */
+/* =====================================================
+   RESPONSIVE DESIGN
+===================================================== */
 
+/* ---------- Tablet ---------- */
+@media (max-width: 1024px) {
+
+  .container,
+  .section {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  h1 {
+    font-size: 3rem !important;
+  }
+
+  h2 {
+    font-size: 2rem !important;
+  }
+
+}
+
+/* ---------- Mobile ---------- */
 @media (max-width: 768px) {
 
+  html,
   body {
     overflow-x: hidden;
   }
 
-  .container,
+  body {
+    width: 100%;
+  }
+
   section {
     padding-left: 20px !important;
     padding-right: 20px !important;
   }
 
   h1 {
-    font-size: 2rem !important;
-    line-height: 1.2;
+    font-size: 2.4rem !important;
+    line-height: 1.2 !important;
+    text-align: center;
   }
 
   h2 {
-    font-size: 1.6rem !important;
+    font-size: 1.8rem !important;
+    text-align: center;
   }
 
   h3 {
-    font-size: 1.3rem !important;
+    font-size: 1.25rem !important;
   }
 
   p {
     font-size: 0.95rem !important;
+    line-height: 1.7 !important;
   }
 
   .grid-2,
   .grid-3,
   .grid-4 {
-    display: grid;
     grid-template-columns: 1fr !important;
-    gap: 1rem;
+    gap: 20px !important;
   }
 
   .card {
-    width: 100% !important;
+    width: 100%;
   }
 
   .btn {
@@ -627,7 +657,593 @@ tr:hover td {
 
 }
 
-/* ── Landing page overrides (light text on homepage background) ─────── */
-/* These undo the portal dark-text defaults for the Landing page only.    */
-/* Landing.jsx uses its own inline styles for text colours,               */
-/* so no extra rules needed here — the tokens above don't affect it.      */
+/* ---------- Small Phones ---------- */
+@media (max-width: 480px) {
+
+  h1 {
+    font-size: 2rem !important;
+  }
+
+  h2 {
+    font-size: 1.5rem !important;
+  }
+
+  .btn {
+    font-size: .95rem;
+    padding: .9rem 1rem;
+  }
+
+}
+/* ===========================================
+   Landing Page Responsive
+=========================================== */
+
+.hero-container{
+    width:100%;
+    padding-left:4rem;
+    padding-right:2rem;
+}
+
+.hero-content{
+    max-width:640px;
+}
+
+.hero-buttons{
+    display:flex;
+    gap:1rem;
+    flex-wrap:wrap;
+}
+
+.portal-container{
+    padding-left:4rem;
+    padding-right:2rem;
+}
+
+.portal-heading{
+    text-align:left;
+    margin-bottom:3.5rem;
+}
+
+/* ================= Mobile ================= */
+
+@media (max-width:768px){
+
+.hero-container{
+    padding:20px;
+    text-align:center;
+}
+
+.hero-content{
+    max-width:100%;
+    margin:auto;
+}
+
+.hero-buttons{
+    flex-direction:column;
+    align-items:center;
+}
+
+.hero-buttons .btn{
+    width:100%;
+    max-width:350px;
+}
+
+.portal-container{
+    padding:20px;
+}
+
+.portal-heading{
+    text-align:center;
+}
+
+}
+/* ============================
+   Navbar Responsive
+============================ */
+
+.desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+/* ================= Tablet ================= */
+
+@media (max-width:1024px){
+
+.desktop-nav{
+    gap:.5rem;
+}
+
+}
+
+/* ================= Mobile ================= */
+
+@media (max-width:768px){
+
+nav{
+    padding:0 20px !important;
+}
+
+.desktop-nav{
+    display:none !important;
+}
+
+.mobile-menu-btn{
+    display:block;
+}
+
+nav img{
+    height:120px !important;
+    margin-top:20px !important;
+}
+
+}
+/* ======================================
+   University Portal Responsive
+====================================== */
+
+.portal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    gap:1rem;
+    margin-bottom:2rem;
+}
+
+.portal-card{
+    width:100%;
+}
+
+.portal-tabs{
+    margin-bottom:2rem;
+}
+
+.issue-btn{
+    align-self:flex-start;
+}
+
+.logout-btn{
+    white-space:nowrap;
+}
+
+/* ================= TABLET ================= */
+
+@media(max-width:1024px){
+
+.portal-header{
+    flex-direction:column;
+    align-items:flex-start;
+}
+
+}
+
+/* ================= MOBILE ================= */
+
+@media(max-width:768px){
+
+.portal-header{
+    text-align:center;
+    align-items:center;
+}
+
+.portal-header h2{
+    text-align:center;
+}
+
+.portal-header p{
+    text-align:center;
+    word-break:break-all;
+}
+
+.logout-btn{
+    width:100%;
+}
+
+.portal-tabs{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.portal-tabs button{
+    width:100%;
+}
+
+.issue-btn{
+    width:100%;
+    align-self:stretch;
+}
+
+.table-wrapper{
+    overflow-x:auto;
+}
+
+table{
+    min-width:750px;
+}
+
+.card{
+    padding:20px !important;
+}
+
+}
+
+/* ============== SMALL PHONE ============== */
+
+@media(max-width:480px){
+
+.portal-header h2{
+    font-size:1.5rem !important;
+}
+
+}
+/* ======================================
+   Student Portal Responsive
+====================================== */
+
+.student-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    margin-bottom:2.5rem;
+    flex-wrap:wrap;
+}
+
+.student-logout-btn{
+    white-space:nowrap;
+}
+
+.verification-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    margin-bottom:1.25rem;
+    flex-wrap:wrap;
+}
+
+.verification-actions{
+    display:flex;
+    gap:.5rem;
+    flex-wrap:wrap;
+}
+
+.certificate-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:1rem;
+}
+
+.certificate-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:.75rem;
+}
+
+.certificate-actions{
+    display:flex;
+    gap:.75rem;
+    margin-top:.5rem;
+    flex-wrap:wrap;
+}
+
+/* ================= TABLET ================= */
+
+@media(max-width:1024px){
+
+.certificate-grid{
+    grid-template-columns:1fr 1fr;
+}
+
+}
+
+/* ================= MOBILE ================= */
+
+@media(max-width:768px){
+
+.student-header{
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+}
+
+.student-logout-btn{
+    width:100%;
+}
+
+.verification-header{
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+}
+
+.verification-header button{
+    width:100%;
+}
+
+.verification-actions{
+    flex-direction:column;
+}
+
+.verification-actions .btn{
+    width:100%;
+}
+
+.certificate-header{
+    flex-direction:column;
+}
+
+.certificate-grid{
+    grid-template-columns:1fr;
+}
+
+.certificate-actions{
+    flex-direction:column;
+}
+
+.certificate-actions .btn{
+    width:100%;
+}
+
+}
+
+/* ============== SMALL PHONE ============== */
+
+@media(max-width:480px){
+
+.student-header h2{
+    font-size:1.5rem !important;
+}
+
+}
+/* ======================================
+   Admin Panel Responsive
+====================================== */
+
+.admin-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    flex-wrap:wrap;
+    margin-bottom:2rem;
+}
+
+.admin-selector{
+    margin-bottom:2rem;
+}
+
+.admin-card{
+    margin-bottom:2rem;
+}
+
+.admin-submit-btn{
+    align-self:flex-start;
+}
+
+.admin-logout-btn{
+    white-space:nowrap;
+}
+
+/* ================= TABLET ================= */
+
+@media(max-width:1024px){
+
+.admin-header{
+    flex-direction:column;
+    align-items:flex-start;
+}
+
+}
+
+/* ================= MOBILE ================= */
+
+@media(max-width:768px){
+
+.admin-header{
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+}
+
+.admin-logout-btn{
+    width:100%;
+}
+
+.admin-selector{
+    grid-template-columns:1fr !important;
+}
+
+.admin-selector .card{
+    width:100%;
+}
+
+.admin-submit-btn{
+    width:100%;
+    align-self:stretch;
+}
+
+.table-wrapper{
+    overflow-x:auto;
+}
+
+table{
+    min-width:750px;
+}
+
+.card{
+    padding:20px !important;
+}
+
+.input{
+    width:100%;
+}
+
+}
+
+/* ================= SMALL PHONE ================= */
+
+@media(max-width:480px){
+
+.admin-header h2{
+    font-size:1.5rem !important;
+}
+
+}
+/* ======================================
+   Verify Portal Responsive
+====================================== */
+
+.verify-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    margin-bottom:2rem;
+    flex-wrap:wrap;
+}
+
+.verify-header-buttons{
+    display:flex;
+    gap:.75rem;
+    flex-wrap:wrap;
+}
+
+.verify-profile-card{
+    margin-bottom:2rem;
+}
+
+.verify-submit-btn{
+    align-self:flex-start;
+}
+
+.verify-btn{
+    align-self:center;
+    font-size:1rem;
+    padding:.75rem 2.5rem;
+}
+
+.ownership-section{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    flex-wrap:wrap;
+}
+
+.ownership-status{
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    flex-wrap:wrap;
+}
+
+.verification-request-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    margin-bottom:1.25rem;
+    flex-wrap:wrap;
+}
+
+/* ================= TABLET ================= */
+
+@media(max-width:1024px){
+
+.verify-header{
+    flex-direction:column;
+    align-items:flex-start;
+}
+
+}
+
+/* ================= MOBILE ================= */
+
+@media(max-width:768px){
+
+.verify-header{
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+}
+
+.verify-header-buttons{
+    width:100%;
+    flex-direction:column;
+}
+
+.verify-header-buttons .btn{
+    width:100%;
+}
+
+.verify-submit-btn{
+    width:100%;
+    align-self:stretch;
+}
+
+.verify-btn{
+    width:100%;
+    align-self:stretch;
+}
+
+.ownership-section{
+    flex-direction:column;
+    align-items:flex-start;
+}
+
+.ownership-status{
+    flex-direction:column;
+    align-items:flex-start;
+}
+
+.verification-request-header{
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+}
+
+.verification-request-header button{
+    width:100%;
+}
+
+.table-wrapper{
+    overflow-x:auto;
+}
+
+table{
+    min-width:750px;
+}
+
+.dropzone{
+    padding:2rem 1rem !important;
+}
+
+.card{
+    padding:20px !important;
+}
+
+}
+
+/* ================= SMALL PHONE ================= */
+
+@media(max-width:480px){
+
+.verify-header h2{
+    font-size:1.5rem !important;
+}
+
+}

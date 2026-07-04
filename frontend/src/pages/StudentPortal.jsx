@@ -137,7 +137,7 @@ function VerificationRequests({ requests, loading, approving, rejecting, onAppro
 
   return (
     <div className="card" style={{ marginBottom: "2rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+      <div className="verification-header">
         <div>
           <h3 style={{ color: "#f1f5f9" }}>Pending Verification Requests</h3>
           <p style={{ fontSize: "0.9rem", marginTop: "0.25rem" }}>
@@ -176,7 +176,7 @@ function VerificationRequests({ requests, loading, approving, rejecting, onAppro
                   <td><StatusBadge status={request.status} /></td>
                   <td>
                     {request.status === "pending" ? (
-                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <div className="verification-actions">
                         <button className="btn btn-primary btn-sm" onClick={() => onApprove(request)} disabled={approving === request.id || rejecting === request.id}>
                           {approving === request.id ? <><span className="spinner" /> Approving...</> : "Approve Ownership"}
                         </button>
@@ -209,7 +209,7 @@ function CredCard({ cred }) {
 
   return (
     <div className="card" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
+      <div className="certificate-header">
         <div>
           <p style={{ fontSize: "0.75rem", color: "#475569", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
             {cred.institution}
@@ -224,7 +224,7 @@ function CredCard({ cred }) {
 
       <hr className="divider" style={{ margin: "0" }} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+      <div className="certificate-grid">
         {[
           { label: "Student", value: cred.student_name },
           { label: "Email", value: cred.student_email || "-" },
@@ -241,7 +241,7 @@ function CredCard({ cred }) {
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+      <div className="certificate-actions">
         <button className="btn btn-outline btn-sm" onClick={copyHash}>
           {copied ? "Copied" : "Copy Hash"}
         </button>
@@ -446,12 +446,17 @@ function Dashboard({ user, onLogout }) {
   return (
     <div className="page" style={portalBg}>
       <div className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", gap: "1rem", flexWrap: "wrap" }}>
+        <div className="student-header">
           <div>
             <h2>My Certificates</h2>
             <p style={{ fontSize: "0.875rem", marginTop: "0.25rem" }}>{user.email}</p>
           </div>
-          <button className="btn btn-outline btn-sm" onClick={onLogout}>Logout</button>
+          <button
+  className="btn btn-outline btn-sm student-logout-btn"
+  onClick={onLogout}
+>
+  Logout
+</button>
         </div>
 
         <VerificationRequests

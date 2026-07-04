@@ -193,15 +193,20 @@ export default function AdminPanel() {
   return (
     <div className="page" style={portalBg}>
       <div className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
+        <div className="admin-header">
           <div>
             <h2>Admin Panel</h2>
             <p style={{ marginTop: "0.25rem" }}>Choose what you want to manage.</p>
           </div>
-          <button className="btn btn-outline btn-sm" onClick={logout}>Logout</button>
+          <button
+  className="btn btn-outline btn-sm admin-logout-btn"
+  onClick={logout}
+>
+  Logout
+</button>
         </div>
 
-        <div className="grid-2" style={{ marginBottom: "2rem" }}>
+        <div className="grid-2 admin-selector">
           <button
             className={`card${activeSection === "university" ? " active-admin-card" : ""}`}
             onClick={() => setActiveSection("university")}
@@ -228,7 +233,7 @@ export default function AdminPanel() {
 
         {activeSection === "university" && (
           <>
-            <div className="card" style={{ marginBottom: "2rem" }}>
+            <div className="card admin-card">
               <h3 style={{ color: "#f1f5f9", marginBottom: "1.5rem" }}>Register a New University</h3>
               <form onSubmit={handleAddUniversity} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                 <div className="grid-2">
@@ -248,7 +253,11 @@ export default function AdminPanel() {
                     This wallet will be authorized on-chain. The university will use MetaMask with this address to log in.
                   </p>
                 </div>
-                <button type="submit" className="btn btn-primary" disabled={addingUniversity} style={{ alignSelf: "flex-start" }}>
+                <button
+type="submit"
+className="btn btn-primary admin-submit-btn"
+disabled={addingUniversity}
+>
                   {addingUniversity ? <><span className="spinner" /> Registering on-chain...</> : "Add University"}
                 </button>
               </form>
@@ -302,7 +311,7 @@ export default function AdminPanel() {
 
         {activeSection === "verifier" && (
           <>
-            <div className="card" style={{ marginBottom: "2rem" }}>
+            <div className="card admin-card">
               <h3 style={{ color: "#f1f5f9", marginBottom: "1.5rem" }}>Register a New Verifier</h3>
               <form onSubmit={handleAddVerifier} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                 <div className="grid-2">
@@ -315,7 +324,11 @@ export default function AdminPanel() {
                     <input className="input" name="email" type="email" value={verifierForm.email} onChange={handleVerifierChange} placeholder="verifier@example.com" required />
                   </div>
                 </div>
-                <button type="submit" className="btn btn-primary" disabled={addingVerifier} style={{ alignSelf: "flex-start" }}>
+                <button
+type="submit"
+className="btn btn-primary admin-submit-btn"
+disabled={addingVerifier}
+>
                   {addingVerifier ? <><span className="spinner" /> Adding...</> : "Add Verifier"}
                 </button>
               </form>

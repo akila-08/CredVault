@@ -304,14 +304,14 @@ export default function VerifyPortal() {
   return (
     <div className="page" style={portalBg}>
       <div className="container" style={{ maxWidth: 980, paddingTop: "2rem", paddingBottom: "4rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
+        <div className="verify-header">
           <div>
             <h2>Verify a Certificate</h2>
             <p style={{ marginTop: "0.35rem" }}>
               Signed in as {verifier?.organization_name || "Verifier"} ({verifier?.email})
             </p>
           </div>
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div className="verify-header-buttons">
             <button className="btn btn-outline btn-sm" onClick={() => setProfileOpen((p) => !p)}>
               Profile
             </button>
@@ -322,7 +322,7 @@ export default function VerifyPortal() {
         </div>
 
         {profileOpen && (
-          <div className="card" style={{ marginBottom: "2rem" }}>
+          <div className="card verify-profile-card">
             <h3 style={{ color: "#f1f5f9", marginBottom: "1rem" }}>Verifier Profile</h3>
             <div className="grid-2" style={{ marginBottom: "1.5rem" }}>
               <div>
@@ -356,7 +356,11 @@ export default function VerifyPortal() {
                   <input className="input" type="password" name="confirm_password" value={passwordForm.confirm_password} onChange={handlePasswordChange} minLength={8} required />
                 </div>
               </div>
-              <button type="submit" className="btn btn-primary" disabled={passwordLoading} style={{ alignSelf: "flex-start" }}>
+              <button
+type="submit"
+className="btn btn-primary verify-submit-btn"
+disabled={passwordLoading}
+>
                 {passwordLoading ? <><span className="spinner" /> Saving...</> : "Change Password"}
               </button>
             </form>
@@ -403,7 +407,7 @@ export default function VerifyPortal() {
               type="submit"
               className="btn btn-primary"
               disabled={loading || !file}
-              style={{ alignSelf: "center", fontSize: "1rem", padding: "0.75rem 2.5rem" }}
+              className="btn btn-primary verify-btn"
             >
               {loading ? <><span className="spinner" /> Verifying on-chain...</> : "Verify on Blockchain"}
             </button>
@@ -468,7 +472,7 @@ export default function VerifyPortal() {
                       {result.status === "VALID" && (
                         <>
                           <hr className="divider" />
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+                          <div className="ownership-section">
                             <div>
                               <p style={{ fontWeight: 600, color: "#f1f5f9", marginBottom: "0.2rem" }}>Ownership Verification</p>
                               <p style={{ fontSize: "0.8rem", color: "#64748b" }}>
@@ -477,7 +481,7 @@ export default function VerifyPortal() {
                             </div>
 
                             {currentRequest ? (
-                              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                              <div className="ownership-status">
                                 <StatusBadge status={currentRequest.status} />
                                 <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>Requested {formatDate(currentRequest.created_at)}</span>
                               </div>
@@ -503,7 +507,7 @@ export default function VerifyPortal() {
         )}
 
         <div className="card" style={{ marginTop: "2rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+          <div className="verification-request-header">
             <h3 style={{ color: "#f1f5f9" }}>Verification Requests</h3>
             <button className="btn btn-outline btn-sm" onClick={loadRequests} disabled={requestsLoading}>
               {requestsLoading ? <><span className="spinner" /> Refreshing...</> : "Refresh"}
