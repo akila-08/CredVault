@@ -751,7 +751,7 @@ tr:hover td {
   display: none;
   background: none;
   border: none;
-  color: white;
+  color: black;
   font-size: 2rem;
   cursor: pointer;
 }
