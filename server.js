@@ -52,6 +52,7 @@ const corsOptions = {
     allowedHeaders: [
         "Content-Type",
         "Authorization",
+        "X-Admin-Key",
     ],
 
     optionsSuccessStatus: 204,
