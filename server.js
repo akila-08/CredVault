@@ -28,6 +28,8 @@ app.use(
             "https://cred-vault-blockchain.vercel.app",
         ],
         credentials: true,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"]
     })
 );
 app.use(express.json());
