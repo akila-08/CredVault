@@ -11,6 +11,9 @@ import verifierRoutes from "./routes/verifierRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import verificationRequestRoutes from "./routes/verificationRequestRoutes.js";
 
+import supabase from "./services/supabaseService.js";
+import { initializeBloomFilter } from "./utils/bloomFilter.js";
+
 dotenv.config();
 
 // Debug environment variables without exposing secrets
@@ -130,6 +133,8 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-    console.log(`CredVault API running on port ${PORT}`);
+initializeBloomFilter(supabase).finally(() => {
+    app.listen(PORT, () => {
+        console.log(`CredVault API running on port ${PORT}`);
+    });
 });

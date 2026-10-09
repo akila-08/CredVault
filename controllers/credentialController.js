@@ -8,6 +8,12 @@ import {
 import supabase from "../services/supabaseService.js";
 import fs from "fs";
 
+import {
+    bloomFilter,
+    isBloomReady,
+} from "../utils/bloomFilter.js";
+
+
 function normalizeEmail(email) {
     return String(email || "").trim().toLowerCase();
 }
@@ -79,6 +85,12 @@ export async function issue(req, res) {
 
         if (error) throw error;
 
+        // Add the certificate hash after successful blockchain issuance
+        // and successful Supabase metadata insertion.
+        bloomFilter.add(documentHash);
+
+        console.log("Certificate added to Bloom Filter:", documentHash);
+
         fs.unlink(req.file.path, () => {});
 
         res.status(201).json({
@@ -100,10 +112,39 @@ export async function verify(req, res) {
             return res.status(400).json({ success: false, message: "Certificate PDF required" });
         }
 
-        const documentHash = hashFile(req.file.path);
-        fs.unlink(req.file.path, () => {});
+        
+const documentHash = hashFile(req.file.path);
+fs.unlink(req.file.path, () => {});
 
-        const result = await verifyOnChain(documentHash);
+// Bloom Filter pre-check
+if (
+    isBloomReady() &&
+    !bloomFilter.mightContain(documentHash)
+) {
+    console.log("Bloom Filter: certificate definitely absent");
+
+    return res.json({
+        success: true,
+        status: "INVALID",
+        message: "Certificate not found in the certificate index",
+        credentialHash: documentHash,
+        bloomFilter: {
+            checked: true,
+            blockchainLookupSkipped: true,
+        },
+    });
+}
+
+console.log(
+    "Bloom Filter:",
+    isBloomReady()
+        ? "MAYBE PRESENT - checking blockchain"
+        : "NOT READY - using normal blockchain verification"
+);
+
+// Continue with your existing blockchain verification
+const result = await verifyOnChain(documentHash);
+
         const [exists, revoked, studentWalletOnChain, issuedAt, issuedBy] = result;
 
         if (!exists) {
