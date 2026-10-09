@@ -25,7 +25,7 @@ app.use(
     cors({
         origin: [
             "http://localhost:5173",
-            "https://cred-vault-eight.vercel.app",
+            "https://cred-vault-blockchain.vercel.app/",
         ],
         credentials: true,
     })
