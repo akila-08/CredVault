@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "measure:gas": "node scripts/measureGas.js",
+    "bench:search": "node scripts/benchSearch.js"
   },
   "keywords": [],
   "author": "",

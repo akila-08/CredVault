@@ -1,3 +1,5 @@
 node_modules
 .env
+frontend/.env.local
+frontend/.env.*.local
 uploads

@@ -1,0 +1,34 @@
+import "dotenv/config";
+import { ethers } from "ethers";
+import fs from "node:fs";
+const abi = JSON.parse(fs.readFileSync(new URL("../config/abi.v2.json", import.meta.url)));
+
+const required = ["POLYGON_RPC_URL", "CONTRACT_ADDRESS", "MEASURE_VALIDATOR_KEYS", "MEASURE_ISSUER_KEY", "MEASURE_STUDENT_WALLET"];
+for (const key of required) if (!process.env[key]) throw new Error(`Missing ${key}`);
+const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
+const validators = process.env.MEASURE_VALIDATOR_KEYS.split(",").map(k => new ethers.Wallet(k.trim(), provider));
+const issuer = new ethers.Wallet(process.env.MEASURE_ISSUER_KEY, provider);
+const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, validators[0]);
+const student = process.env.MEASURE_STUDENT_WALLET;
+const hash = ethers.keccak256(ethers.toUtf8Bytes(`CredVault gas measurement ${Date.now()}`));
+
+async function report(label, tx) {
+  const receipt = await tx.wait(1);
+  const price = receipt.gasPrice ?? (await provider.getFeeData()).gasPrice;
+  const cost = receipt.gasUsed * price;
+  console.log(`${label}: gas=${receipt.gasUsed} costPOL=${ethers.formatEther(cost)} tx=${tx.hash}`);
+  return receipt;
+}
+
+const candidate = ethers.Wallet.createRandom().address;
+const proposed = await report("proposeIssuer", await contract.proposeIssuer(candidate));
+const created = proposed.logs.map(log => { try { return contract.interface.parseLog(log); } catch { return null; } }).find(log => log?.name === "ProposalCreated");
+const proposalId = created.args.id;
+for (const validator of validators.slice(1)) {
+  const voterContract = contract.connect(validator);
+  await report("voteOnProposal", await voterContract.voteOnProposal(proposalId, true));
+}
+const signedIssue = await contract.connect(issuer).issueCredential.populateTransaction(hash, student);
+// issueCredential measurement needs the configured issuer to be approved on this contract.
+await report("issueCredential", await issuer.sendTransaction({ ...signedIssue, to: process.env.CONTRACT_ADDRESS }));
+await report("revokeCredential", await contract.connect(issuer).revokeCredential(hash));

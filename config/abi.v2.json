@@ -1,0 +1,599 @@
+[
+ {
+  "inputs": [
+   {
+    "internalType": "address[]",
+    "name": "initialValidators",
+    "type": "address[]"
+   },
+   {
+    "internalType": "bool",
+    "name": "_unanimous",
+    "type": "bool"
+   }
+  ],
+  "stateMutability": "nonpayable",
+  "type": "constructor"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "bytes32",
+    "name": "credentialHash",
+    "type": "bytes32"
+   },
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "studentWallet",
+    "type": "address"
+   },
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "university",
+    "type": "address"
+   },
+   {
+    "indexed": false,
+    "internalType": "uint256",
+    "name": "issuedAt",
+    "type": "uint256"
+   }
+  ],
+  "name": "CredentialIssued",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "bytes32",
+    "name": "credentialHash",
+    "type": "bytes32"
+   },
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "university",
+    "type": "address"
+   },
+   {
+    "indexed": false,
+    "internalType": "uint256",
+    "name": "revokedAt",
+    "type": "uint256"
+   }
+  ],
+  "name": "CredentialRevoked",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "uint256",
+    "name": "id",
+    "type": "uint256"
+   },
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "candidate",
+    "type": "address"
+   },
+   {
+    "indexed": false,
+    "internalType": "bool",
+    "name": "isRemoval",
+    "type": "bool"
+   },
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "proposer",
+    "type": "address"
+   }
+  ],
+  "name": "ProposalCreated",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "uint256",
+    "name": "id",
+    "type": "uint256"
+   },
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "candidate",
+    "type": "address"
+   },
+   {
+    "indexed": false,
+    "internalType": "bool",
+    "name": "approved",
+    "type": "bool"
+   },
+   {
+    "indexed": false,
+    "internalType": "bool",
+    "name": "isRemoval",
+    "type": "bool"
+   }
+  ],
+  "name": "ProposalResolved",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "university",
+    "type": "address"
+   }
+  ],
+  "name": "UniversityAdded",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "university",
+    "type": "address"
+   }
+  ],
+  "name": "UniversityRemoved",
+  "type": "event"
+ },
+ {
+  "anonymous": false,
+  "inputs": [
+   {
+    "indexed": true,
+    "internalType": "uint256",
+    "name": "id",
+    "type": "uint256"
+   },
+   {
+    "indexed": true,
+    "internalType": "address",
+    "name": "validator",
+    "type": "address"
+   },
+   {
+    "indexed": false,
+    "internalType": "bool",
+    "name": "approve",
+    "type": "bool"
+   }
+  ],
+  "name": "VoteCast",
+  "type": "event"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "address",
+    "name": "",
+    "type": "address"
+   }
+  ],
+  "name": "authorizedUniversities",
+  "outputs": [
+   {
+    "internalType": "bool",
+    "name": "",
+    "type": "bool"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "bytes32",
+    "name": "credentialHash",
+    "type": "bytes32"
+   }
+  ],
+  "name": "credentialExists",
+  "outputs": [
+   {
+    "internalType": "bool",
+    "name": "",
+    "type": "bool"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "uint256",
+    "name": "id",
+    "type": "uint256"
+   }
+  ],
+  "name": "getProposal",
+  "outputs": [
+   {
+    "internalType": "address",
+    "name": "candidate",
+    "type": "address"
+   },
+   {
+    "internalType": "bool",
+    "name": "isRemoval",
+    "type": "bool"
+   },
+   {
+    "internalType": "uint256",
+    "name": "approvals",
+    "type": "uint256"
+   },
+   {
+    "internalType": "uint256",
+    "name": "rejections",
+    "type": "uint256"
+   },
+   {
+    "internalType": "uint256",
+    "name": "required",
+    "type": "uint256"
+   },
+   {
+    "internalType": "uint256",
+    "name": "totalValidators",
+    "type": "uint256"
+   },
+   {
+    "internalType": "enum CredVaultV2.Status",
+    "name": "status",
+    "type": "uint8"
+   },
+   {
+    "internalType": "uint256",
+    "name": "createdAt",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "getValidators",
+  "outputs": [
+   {
+    "internalType": "address[]",
+    "name": "",
+    "type": "address[]"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   },
+   {
+    "internalType": "address",
+    "name": "",
+    "type": "address"
+   }
+  ],
+  "name": "hasVoted",
+  "outputs": [
+   {
+    "internalType": "bool",
+    "name": "",
+    "type": "bool"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "address",
+    "name": "",
+    "type": "address"
+   }
+  ],
+  "name": "isValidator",
+  "outputs": [
+   {
+    "internalType": "bool",
+    "name": "",
+    "type": "bool"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "bytes32",
+    "name": "credentialHash",
+    "type": "bytes32"
+   },
+   {
+    "internalType": "address",
+    "name": "studentWallet",
+    "type": "address"
+   }
+  ],
+  "name": "issueCredential",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "bytes32",
+    "name": "credentialHash",
+    "type": "bytes32"
+   },
+   {
+    "internalType": "address",
+    "name": "studentWallet",
+    "type": "address"
+   },
+   {
+    "internalType": "bytes",
+    "name": "signature",
+    "type": "bytes"
+   }
+  ],
+  "name": "issueCredentialFor",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "address",
+    "name": "",
+    "type": "address"
+   }
+  ],
+  "name": "openProposalOf",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "proposalCount",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "address",
+    "name": "candidate",
+    "type": "address"
+   }
+  ],
+  "name": "proposeIssuer",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "address",
+    "name": "candidate",
+    "type": "address"
+   }
+  ],
+  "name": "proposeRemoval",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "requiredApprovals",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "bytes32",
+    "name": "credentialHash",
+    "type": "bytes32"
+   }
+  ],
+  "name": "revokeCredential",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "unanimous",
+  "outputs": [
+   {
+    "internalType": "bool",
+    "name": "",
+    "type": "bool"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [],
+  "name": "validatorCount",
+  "outputs": [
+   {
+    "internalType": "uint256",
+    "name": "",
+    "type": "uint256"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "bytes32",
+    "name": "credentialHash",
+    "type": "bytes32"
+   }
+  ],
+  "name": "verifyCredential",
+  "outputs": [
+   {
+    "internalType": "bool",
+    "name": "exists",
+    "type": "bool"
+   },
+   {
+    "internalType": "bool",
+    "name": "revoked",
+    "type": "bool"
+   },
+   {
+    "internalType": "address",
+    "name": "studentWallet",
+    "type": "address"
+   },
+   {
+    "internalType": "uint256",
+    "name": "issuedAt",
+    "type": "uint256"
+   },
+   {
+    "internalType": "address",
+    "name": "issuedBy",
+    "type": "address"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "bytes32",
+    "name": "credentialHash",
+    "type": "bytes32"
+   }
+  ],
+  "name": "verifyWithIssuer",
+  "outputs": [
+   {
+    "internalType": "bool",
+    "name": "exists",
+    "type": "bool"
+   },
+   {
+    "internalType": "bool",
+    "name": "revoked",
+    "type": "bool"
+   },
+   {
+    "internalType": "address",
+    "name": "studentWallet",
+    "type": "address"
+   },
+   {
+    "internalType": "uint256",
+    "name": "issuedAt",
+    "type": "uint256"
+   },
+   {
+    "internalType": "address",
+    "name": "issuedBy",
+    "type": "address"
+   },
+   {
+    "internalType": "bool",
+    "name": "issuerAuthorized",
+    "type": "bool"
+   }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+ },
+ {
+  "inputs": [
+   {
+    "internalType": "uint256",
+    "name": "id",
+    "type": "uint256"
+   },
+   {
+    "internalType": "bool",
+    "name": "approve",
+    "type": "bool"
+   }
+  ],
+  "name": "voteOnProposal",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+ }
+]

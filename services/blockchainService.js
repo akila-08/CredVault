@@ -2,64 +2,60 @@ import { ethers } from "ethers";
 import dotenv from "dotenv";
 import fs from "fs";
 
-const abi = JSON.parse(
-    fs.readFileSync(
-        new URL("../config/abi.json", import.meta.url)
-    )
-);
-
 dotenv.config();
-
+const abi = JSON.parse(fs.readFileSync(new URL("../config/abi.v2.json", import.meta.url)));
 const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
-
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const contractAddress = process.env.CONTRACT_ADDRESS;
+const contract = new ethers.Contract(contractAddress, abi, wallet);
+const reader = new ethers.Contract(contractAddress, abi, provider);
 
-const contract = new ethers.Contract(
-    process.env.CONTRACT_ADDRESS,
-    abi,
-    wallet
-);
-
-// ── Credential functions ──────────────────────────────────────
-
-export async function verifyCredential(hash) {
-    return await contract.verifyCredential(hash);
+export async function verifyCredential(hash) { return reader.verifyCredential(hash); }
+export async function verifyWithIssuer(hash) { return reader.verifyWithIssuer(hash); }
+export async function credentialExists(hash) { return reader.credentialExists(hash); }
+export async function issueCredential(hash, student) {
+    const tx = await contract.issueCredential(hash, student); await tx.wait(); return tx.hash;
+}
+export async function issueCredentialFor(hash, student, signature) {
+    const tx = await contract.issueCredentialFor(hash, student, signature); await tx.wait(); return tx.hash;
+}
+export async function revokeCredential(hash) {
+    const tx = await contract.revokeCredential(hash); await tx.wait(); return tx.hash;
+}
+export async function isAuthorizedUniversity(address) { return reader.authorizedUniversities(address); }
+export async function getValidators() {
+    const [addresses, required, unanimous, count] = await Promise.all([
+        reader.getValidators(), reader.requiredApprovals(), reader.unanimous(), reader.validatorCount(),
+    ]);
+    return { addresses, required: Number(required), unanimous, total: Number(count) };
+}
+export async function getProposal(id) {
+    const p = await reader.getProposal(id);
+    return { candidate: p.candidate, isRemoval: p.isRemoval, approvals: Number(p.approvals),
+        rejections: Number(p.rejections), required: Number(p.required), totalValidators: Number(p.totalValidators),
+        status: ["none", "open", "approved", "rejected"][Number(p.status)], createdAt: Number(p.createdAt) };
 }
 
-export async function credentialExists(hash) {
-    return await contract.credentialExists(hash);
+// Parse only events emitted by this deployed contract; request-body data never creates votes.
+export async function parseVotingReceipt(txHash) {
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt) throw new Error("Transaction receipt not found");
+    const iface = new ethers.Interface(abi);
+    const events = [];
+    for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== contractAddress.toLowerCase()) continue;
+        try { events.push(iface.parseLog(log)); } catch { /* unrelated log */ }
+    }
+    if (!events.length) throw new Error("Transaction has no CredVaultV2 events");
+    return { receipt, events };
 }
 
-export async function issueCredential(credentialHash, studentWallet) {
-    const tx = await contract.issueCredential(credentialHash, studentWallet);
-    await tx.wait();
-    return tx.hash;
-}
-
-export async function revokeCredential(credentialHash) {
-    const tx = await contract.revokeCredential(credentialHash);
-    await tx.wait();
-    return tx.hash;
-}
-
-// ── University management functions ──────────────────────────
-
-export async function addUniversity(walletAddress) {
-    const tx = await contract.addUniversity(walletAddress);
-    await tx.wait();
-    return tx.hash;
-}
-
-export async function removeUniversity(walletAddress) {
-    const tx = await contract.removeUniversity(walletAddress);
-    await tx.wait();
-    return tx.hash;
-}
-
-export async function isAuthorizedUniversity(walletAddress) {
-    return await contract.authorizedUniversities(walletAddress);
-}
-
-export async function owner() {
-    return await contract.owner();
+export async function verifyRevocationReceipt(txHash, credentialHash, issuerAddress) {
+    const { receipt, events } = await parseVotingReceipt(txHash);
+    if (receipt.status !== 1) throw new Error("Revocation transaction failed");
+    const matched = events.some(e => e.name === "CredentialRevoked"
+        && e.args.credentialHash.toLowerCase() === credentialHash.toLowerCase()
+        && e.args.university.toLowerCase() === issuerAddress.toLowerCase());
+    if (!matched) throw new Error("Transaction does not contain a matching issuer revocation");
+    return txHash;
 }

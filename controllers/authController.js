@@ -67,10 +67,10 @@ export async function login(req, res) {
 
         // 5. Get university details from Supabase
         const { data: uni, error } = await supabase
-            .from("universities")
-            .select("id, name, wallet_address, is_active")
+            .from("issuer_registry1")
+            .select("id, name, wallet_address, status")
             .eq("wallet_address", address.toLowerCase())
-            .eq("is_active", true)
+            .eq("status", "approved")
             .single();
 
         if (error || !uni) {

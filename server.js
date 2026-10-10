@@ -10,6 +10,7 @@ import authRoutes from "./routes/authRoutes.js";
 import verifierRoutes from "./routes/verifierRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import verificationRequestRoutes from "./routes/verificationRequestRoutes.js";
+import issuerRoutes from "./routes/issuerRoutes.js";
 
 import supabase from "./services/supabaseService.js";
 import { initializeBloomFilter } from "./utils/bloomFilter.js";
@@ -82,6 +83,7 @@ app.use("/api/universities", universityRoutes);
 app.use("/api/verifiers", verifierRoutes);
 app.use("/api/credentials", credentialRoutes);
 app.use("/api/verification-requests", verificationRequestRoutes);
+app.use("/api/issuers", issuerRoutes);
 
 // API health check
 app.get("/", (req, res) => {
@@ -96,6 +98,7 @@ app.get("/", (req, res) => {
             verifiers: "/api/verifiers",
             credentials: "/api/credentials",
             verificationRequests: "/api/verification-requests",
+            issuers: "/api/issuers",
         },
     });
 });

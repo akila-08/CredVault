@@ -431,10 +431,11 @@ disabled={passwordLoading}
                         {[
                           { label: "Status", value: result.status },
                           { label: "Issuing University", value: result.onChain.issuingUniversity || result.onChain.issuedBy },
+                          { label: "Issuer approved by validators", value: result.onChain.issuerAuthorized ? "Yes" : "No" },
                           { label: "Issued At", value: result.onChain.issuedAt ? new Date(result.onChain.issuedAt).toLocaleString() : "-" },
                           { label: "Student Wallet", value: result.onChain.studentWallet, mono: true },
                         ].map(({ label, value, mono }) => (
-                          <div key={label}>
+                          <div key={label} style={label === "Issuer approved by validators" && !result.onChain.issuerAuthorized ? { padding: ".5rem", borderRadius: 8, background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.35)" } : undefined}>
                             <p style={{ fontSize: "0.7rem", color: "#475569", fontWeight: 600, textTransform: "uppercase", marginBottom: "0.2rem" }}>{label}</p>
                             <p style={{ fontSize: "0.875rem", color: "#f1f5f9", fontFamily: mono ? "monospace" : undefined, wordBreak: "break-all" }}>{value}</p>
                           </div>

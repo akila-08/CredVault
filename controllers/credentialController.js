@@ -1,9 +1,11 @@
 import { hashFile } from "../utils/hashFile.js";
 import {
     issueCredential,
+    issueCredentialFor,
     credentialExists,
-    verifyCredential as verifyOnChain,
+    verifyWithIssuer,
     revokeCredential as revokeOnChain,
+    verifyRevocationReceipt,
 } from "../services/blockchainService.js";
 import supabase from "../services/supabaseService.js";
 import fs from "fs";
@@ -64,7 +66,9 @@ export async function issue(req, res) {
             return res.status(409).json({ success: false, message: "This certificate PDF already exists on-chain" });
         }
 
-        const txHash = await issueCredential(documentHash, student_wallet);
+        const txHash = req.body.issuer_signature
+            ? await issueCredentialFor(documentHash, student_wallet, req.body.issuer_signature)
+            : await issueCredential(documentHash, student_wallet);
 
         const { error } = await supabase.from("credentials").insert({
             document_hash: documentHash,
@@ -143,9 +147,9 @@ console.log(
 );
 
 // Continue with your existing blockchain verification
-const result = await verifyOnChain(documentHash);
+        const result = await verifyWithIssuer(documentHash);
 
-        const [exists, revoked, studentWalletOnChain, issuedAt, issuedBy] = result;
+        const [exists, revoked, studentWalletOnChain, issuedAt, issuedBy, issuerAuthorized] = result;
 
         if (!exists) {
             return res.json({
@@ -163,7 +167,7 @@ const result = await verifyOnChain(documentHash);
             .single();
 
         const { data: uni } = await supabase
-            .from("universities")
+            .from("issuer_registry1")
             .select("name")
             .eq("wallet_address", String(issuedBy || "").toLowerCase())
             .single();
@@ -179,6 +183,8 @@ const result = await verifyOnChain(documentHash);
                 issuingUniversity: uni?.name || null,
                 studentWallet: studentWalletOnChain,
                 revoked,
+                issuerAuthorized,
+                issuerValidated: Boolean(issuerAuthorized),
             },
             metadata: cred || null,
         });
@@ -219,7 +225,9 @@ export async function revoke(req, res) {
             return res.status(409).json({ success: false, message: "Credential is already revoked" });
         }
 
-        const txHash = await revokeOnChain(credential_hash);
+        const txHash = req.body.txHash
+            ? await verifyRevocationReceipt(req.body.txHash, credential_hash, req.university.wallet)
+            : await revokeOnChain(credential_hash);
 
         await supabase
             .from("credentials")

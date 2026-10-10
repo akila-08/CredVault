@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import API from "../api/client";
 import adminBg from "../assets/admin.png";
+import IssuerVoting from "../components/IssuerVoting";
 
 const portalBg = {
   backgroundImage: `linear-gradient(135deg, rgba(7,20,60,0.72) 0%, rgba(10,30,80,0.65) 100%), url(${adminBg})`,
@@ -18,15 +19,12 @@ export default function AdminPanel() {
   const [activeSection, setActiveSection] = useState(null);
 
   const [universities, setUniversities] = useState([]);
-  const [universityForm, setUniversityForm] = useState({ name: "", wallet_address: "", contact_email: "" });
   const [verifiers, setVerifiers] = useState([]);
   const [verifierForm, setVerifierForm] = useState({ organization_name: "", email: "" });
   const [temporaryPassword, setTemporaryPassword] = useState(null);
 
   const [loading, setLoading] = useState(false);
-  const [addingUniversity, setAddingUniversity] = useState(false);
   const [addingVerifier, setAddingVerifier] = useState(false);
-  const [removingUniversity, setRemovingUniversity] = useState(null);
   const [removingVerifier, setRemovingVerifier] = useState(null);
 
 
@@ -76,45 +74,8 @@ export default function AdminPanel() {
     }
   }
 
-  function handleUniversityChange(e) {
-    setUniversityForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-  }
-
   function handleVerifierChange(e) {
     setVerifierForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-  }
-
-  async function handleAddUniversity(e) {
-    e.preventDefault();
-    setAddingUniversity(true);
-    try {
-      await API.post("/api/universities", universityForm, {
-        headers: { "x-admin-key": adminKey },
-      });
-      toast.success(`${universityForm.name} registered on-chain`);
-      setUniversityForm({ name: "", wallet_address: "", contact_email: "" });
-      loadUniversities();
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message);
-    } finally {
-      setAddingUniversity(false);
-    }
-  }
-
-  async function handleRemoveUniversity(wallet, name) {
-    if (!confirm(`Remove ${name}? Their wallet will be deauthorized on-chain.`)) return;
-    setRemovingUniversity(wallet);
-    try {
-      await API.delete(`/api/universities/${wallet}`, {
-        headers: { "x-admin-key": adminKey },
-      });
-      toast.success(`${name} removed`);
-      loadUniversities();
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message);
-    } finally {
-      setRemovingUniversity(null);
-    }
   }
 
   async function handleAddVerifier(e) {
@@ -223,46 +184,25 @@ export default function AdminPanel() {
             <h3 style={{ color: "#f1f5f9", marginBottom: "0.5rem" }}>Verifier</h3>
             <p>Register verifier organizations and send them login credentials.</p>
           </button>
+          <button
+            className={`card${activeSection === "voting" ? " active-admin-card" : ""}`}
+            onClick={() => setActiveSection("voting")}
+            style={{ textAlign: "left", cursor: "pointer" }}
+          >
+            <h3 style={{ color: "#f1f5f9", marginBottom: "0.5rem" }}>Issuer Voting</h3>
+            <p>Propose issuers and vote with your validator wallet on Polygon Amoy.</p>
+          </button>
         </div>
 
         {!activeSection && (
           <div className="alert alert-warning">
-            Select University or Verifier to continue.
+            Select University, Verifier, or Issuer Voting to continue.
           </div>
         )}
 
         {activeSection === "university" && (
           <>
-            <div className="card admin-card">
-              <h3 style={{ color: "#f1f5f9", marginBottom: "1.5rem" }}>Register a New University</h3>
-              <form onSubmit={handleAddUniversity} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                <div className="grid-2">
-                  <div className="input-group">
-                    <label>University Name</label>
-                    <input className="input" name="name" value={universityForm.name} onChange={handleUniversityChange} placeholder="Anna University" required />
-                  </div>
-                  <div className="input-group">
-                    <label>Contact Email (optional)</label>
-                    <input className="input" name="contact_email" type="email" value={universityForm.contact_email} onChange={handleUniversityChange} placeholder="admin@university.edu" />
-                  </div>
-                </div>
-                <div className="input-group">
-                  <label>University Wallet Address</label>
-                  <input className="input" name="wallet_address" value={universityForm.wallet_address} onChange={handleUniversityChange} placeholder="0x..." required />
-                  <p style={{ fontSize: "0.8rem", color: "#475569" }}>
-                    This wallet will be authorized on-chain. The university will use MetaMask with this address to log in.
-                  </p>
-                </div>
-                <button
-type="submit"
-className="btn btn-primary admin-submit-btn"
-disabled={addingUniversity}
->
-                  {addingUniversity ? <><span className="spinner" /> Registering on-chain...</> : "Add University"}
-                </button>
-              </form>
-            </div>
-
+            <div className="alert alert-warning">Adding and removing university issuers now requires validator votes. Use the Issuer Voting section.</div>
             <div className="card">
               <h3 style={{ color: "#f1f5f9", marginBottom: "1.5rem" }}>
                 Registered Universities ({universities.length})
@@ -280,7 +220,6 @@ disabled={addingUniversity}
                         <th>Wallet Address</th>
                         <th>Contact</th>
                         <th>Registered</th>
-                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -290,15 +229,6 @@ disabled={addingUniversity}
                           <td className="mono">{u.wallet_address}</td>
                           <td>{u.contact_email || "-"}</td>
                           <td>{new Date(u.created_at).toLocaleDateString()}</td>
-                          <td>
-                            <button
-                              className="btn btn-danger btn-sm"
-                              disabled={removingUniversity === u.wallet_address}
-                              onClick={() => handleRemoveUniversity(u.wallet_address, u.name)}
-                            >
-                              {removingUniversity === u.wallet_address ? <span className="spinner" /> : "Remove"}
-                            </button>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -308,6 +238,8 @@ disabled={addingUniversity}
             </div>
           </>
         )}
+
+        {activeSection === "voting" && <IssuerVoting adminKey={adminKey} />}
 
         {activeSection === "verifier" && (
           <>

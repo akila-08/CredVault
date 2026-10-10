@@ -4,6 +4,7 @@ import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import API from "../api/client";
 import universityBg from "../assets/university.png";
+import { AMOY_CHAIN_HEX, AMOY_NETWORK, CONTRACT_ADDRESS, VOTING_ABI } from "../config/contractV2";
 
 const portalBg = {
   backgroundImage: `linear-gradient(135deg, rgba(7,20,60,0.72) 0%, rgba(10,30,80,0.65) 100%), url(${universityBg})`,
@@ -140,6 +141,18 @@ function IssueForm({ university, onIssued }) {
       fd.append("certificate", file);
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
 
+      if (!window.ethereum) throw new Error("MetaMask is required to sign credential issuance");
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      try { await provider.send("wallet_switchEthereumChain", [{ chainId: AMOY_CHAIN_HEX }]); }
+      catch (error) { if (error.code !== 4902) throw error; await provider.send("wallet_addEthereumChain", [AMOY_NETWORK]); }
+      const signer = await provider.getSigner(), issuer = await signer.getAddress();
+      if (issuer.toLowerCase() !== university.wallet.toLowerCase()) throw new Error("Connect the university wallet used to log in");
+      const chainId = (await provider.getNetwork()).chainId;
+      const fileHash = `0x${Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))).map(b => b.toString(16).padStart(2, "0")).join("")}`;
+      const digest = ethers.solidityPackedKeccak256(["address", "uint256", "bytes32", "address"], [CONTRACT_ADDRESS, chainId, fileHash, form.student_wallet]);
+      fd.append("issuer_signature", await signer.signMessage(ethers.getBytes(digest)));
+
       const { data } = await API.post("/api/credentials/issue", fd);
       setResult(data);
       toast.success("Certificate issued on-chain!");
@@ -239,7 +252,17 @@ function IssuedList({ refresh }) {
     if (!confirm(`Revoke certificate for ${name}? This action is irreversible on-chain.`)) return;
     setRevoking(credential_hash);
     try {
-      await API.post("/api/credentials/revoke", { credential_hash });
+      if (!window.ethereum) throw new Error("MetaMask is required to revoke credentials");
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      try { await provider.send("wallet_switchEthereumChain", [{ chainId: AMOY_CHAIN_HEX }]); }
+      catch (error) { if (error.code !== 4902) throw error; await provider.send("wallet_addEthereumChain", [AMOY_NETWORK]); }
+      const signer = await provider.getSigner();
+      if ((await signer.getAddress()).toLowerCase() !== JSON.parse(localStorage.getItem("cv_uni_info")).wallet.toLowerCase()) throw new Error("Connect the university wallet used to log in");
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ["function revokeCredential(bytes32 credentialHash)"], signer);
+      const tx = await contract.revokeCredential(credential_hash);
+      await tx.wait(1);
+      await API.post("/api/credentials/revoke", { credential_hash, txHash: tx.hash });
       toast.success("Certificate revoked on-chain");
       load();
     } catch (err) {
