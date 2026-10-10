@@ -47,8 +47,12 @@ export default function AdminPanel() {
 
       setAuthenticated(true);
       toast.success("Admin access granted");
-    } catch {
-      toast.error("Invalid admin key");
+    } catch (err) {
+      if (err.response?.status === 403) {
+        toast.error("Invalid admin key");
+      } else {
+        toast.error(err.response?.data?.message || err.message);
+      }
     } finally {
       setLoading(false);
     }

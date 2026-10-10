@@ -1,4 +1,4 @@
-export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "";
+export const CONTRACT_ADDRESS =   "0x1a24e78b8578700e33e6a016e8a5c9b1df4609da";
 export const AMOY_CHAIN_ID = 80002;
 export const AMOY_CHAIN_HEX = "0x13882";
 export const AMOY_NETWORK = { chainId: AMOY_CHAIN_HEX, chainName: "Polygon Amoy", nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 }, rpcUrls: ["https://rpc-amoy.polygon.technology/"], blockExplorerUrls: ["https://amoy.polygonscan.com/"] };

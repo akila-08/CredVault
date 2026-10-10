@@ -300,7 +300,6 @@ export default function VerifyPortal() {
       </div>
     );
   }
-  console.log("REQUESTS:", requests);
   return (
     <div className="page" style={portalBg}>
       <div className="container" style={{ maxWidth: 980, paddingTop: "2rem", paddingBottom: "4rem" }}>

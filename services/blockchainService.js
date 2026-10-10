@@ -4,7 +4,13 @@ import fs from "fs";
 
 dotenv.config();
 const abi = JSON.parse(fs.readFileSync(new URL("../config/abi.v2.json", import.meta.url)));
-const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
+const provider = new ethers.JsonRpcProvider(
+    process.env.POLYGON_RPC_URL,
+    undefined,
+    {
+        batchMaxCount: 1
+    }
+);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contractAddress = process.env.CONTRACT_ADDRESS;
 const contract = new ethers.Contract(contractAddress, abi, wallet);
