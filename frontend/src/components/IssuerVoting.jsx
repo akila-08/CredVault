@@ -20,7 +20,11 @@ export default function IssuerVoting({ adminKey }) {
     ]);
     setProposals(p.proposals || []); setRule(v); setIssuers(i.issuers || []);
   }, []);
-  useEffect(() => { refresh().catch((e) => toast.error(e.response?.data?.message || e.message)); }, [refresh]);
+  useEffect(() => {
+    refresh().catch((e) => toast.error(e.response?.data?.message || e.message));
+    const timer = setInterval(() => refresh().catch(() => {}), 10000);
+    return () => clearInterval(timer);
+  }, [refresh]);
   useEffect(() => {
     if (!wallet || !validator) { setVotedIds(new Set()); return; }
     Promise.all(proposals.map(async p => [String(p.proposal_id), await wallet.contract.hasVoted(p.proposal_id, wallet.address)]))
@@ -63,6 +67,7 @@ export default function IssuerVoting({ adminKey }) {
   return <div className="card admin-card">
     <div className="verification-request-header"><div><h3 style={{ color: "#f1f5f9" }}>Issuer Voting</h3>
       <p>{rule ? `${rule.unanimous ? "Unanimous" : "Majority"}: ${rule.required} of ${rule.total} validators` : "Loading validator rule…"}</p></div>
+      <button className="btn btn-outline btn-sm" onClick={() => refresh().catch((e) => toast.error(e.response?.data?.message || e.message))}>Refresh</button>
       <button className="btn btn-outline btn-sm" onClick={connect}>{wallet ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}${validator ? " (validator)" : " (read only)"}` : "Connect wallet"}</button>
     </div>
     {validator && <form onSubmit={propose} className="grid-2" style={{ margin: "1.5rem 0" }}>

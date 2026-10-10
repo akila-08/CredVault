@@ -71,6 +71,11 @@ contract CredVaultV2 {
         address indexed university,
         uint256 revokedAt
     );
+    event CredentialRsaSignature(
+        bytes32 indexed credentialHash,
+        address indexed university,
+        bytes signature
+    );
 
     // =========================
     // MODIFIERS
@@ -241,6 +246,28 @@ contract CredVaultV2 {
         address signer = _recover(ethSigned, signature);
         require(authorizedUniversities[signer], "Signer not authorized university");
         _issue(credentialHash, studentWallet, signer);
+    }
+
+    /// @notice Issue with an independently verified RSA-PSS certificate signature.
+    /// @dev The backend verifies the RSA signature against the university's registered
+    ///      public key; the signature itself is emitted here as immutable transaction data.
+    function issueCredentialForWithRsa(
+        bytes32 credentialHash,
+        address studentWallet,
+        bytes calldata signature,
+        bytes calldata rsaSignature
+    ) external {
+        require(rsaSignature.length > 0, "RSA signature required");
+        bytes32 digest = keccak256(
+            abi.encodePacked(address(this), block.chainid, credentialHash, studentWallet)
+        );
+        bytes32 ethSigned = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", digest)
+        );
+        address signer = _recover(ethSigned, signature);
+        require(authorizedUniversities[signer], "Signer not authorized university");
+        _issue(credentialHash, studentWallet, signer);
+        emit CredentialRsaSignature(credentialHash, signer, rsaSignature);
     }
 
     function _issue(bytes32 credentialHash, address studentWallet, address issuer) internal {

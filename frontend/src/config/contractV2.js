@@ -1,4 +1,4 @@
-export const CONTRACT_ADDRESS =   "0x1a24e78b8578700e33e6a016e8a5c9b1df4609da";
+export const CONTRACT_ADDRESS ="0xa51E12E178E84fcd2873a13C7F9f36F96671d43D";
 export const AMOY_CHAIN_ID = 80002;
 export const AMOY_CHAIN_HEX = "0x13882";
 export const AMOY_NETWORK = { chainId: AMOY_CHAIN_HEX, chainName: "Polygon Amoy", nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 }, rpcUrls: ["https://rpc-amoy.polygon.technology/"], blockExplorerUrls: ["https://amoy.polygonscan.com/"] };

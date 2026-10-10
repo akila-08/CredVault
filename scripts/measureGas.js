@@ -1,7 +1,12 @@
 import "dotenv/config";
 import { ethers } from "ethers";
 import fs from "node:fs";
-const abi = JSON.parse(fs.readFileSync(new URL("../config/abi.v2.json", import.meta.url)));
+import crypto from "node:crypto";
+const abi = [
+  ...JSON.parse(fs.readFileSync(new URL("../config/abi.v2.json", import.meta.url))),
+  "function issueCredentialForWithRsa(bytes32 credentialHash,address studentWallet,bytes signature,bytes rsaSignature)",
+  "event CredentialRsaSignature(bytes32 indexed credentialHash,address indexed university,bytes signature)",
+];
 
 const required = ["POLYGON_RPC_URL", "CONTRACT_ADDRESS", "MEASURE_VALIDATOR_KEYS", "MEASURE_ISSUER_KEY", "MEASURE_STUDENT_WALLET"];
 for (const key of required) if (!process.env[key]) throw new Error(`Missing ${key}`);
@@ -28,7 +33,21 @@ for (const validator of validators.slice(1)) {
   const voterContract = contract.connect(validator);
   await report("voteOnProposal", await voterContract.voteOnProposal(proposalId, true));
 }
-const signedIssue = await contract.connect(issuer).issueCredential.populateTransaction(hash, student);
-// issueCredential measurement needs the configured issuer to be approved on this contract.
-await report("issueCredential", await issuer.sendTransaction({ ...signedIssue, to: process.env.CONTRACT_ADDRESS }));
+// Measure the current relayed issuance path, including the on-chain RSA signature event.
+// The configured Ethereum issuer must already be approved by the contract.
+const network = await provider.getNetwork();
+const issuerDigest = ethers.solidityPackedKeccak256(
+  ["address", "uint256", "bytes32", "address"],
+  [process.env.CONTRACT_ADDRESS, network.chainId, hash, student]
+);
+const walletSignature = await issuer.signMessage(ethers.getBytes(issuerDigest));
+const { privateKey: rsaPrivateKey } = crypto.generateKeyPairSync("rsa", { modulusLength: 3072 });
+const rsaSignature = crypto.sign("sha256", Buffer.from(hash.slice(2), "hex"), {
+  key: rsaPrivateKey,
+  padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+  saltLength: 32,
+});
+await report("issueCredentialWithRsa", await contract.issueCredentialForWithRsa(
+  hash, student, walletSignature, `0x${rsaSignature.toString("hex")}`
+));
 await report("revokeCredential", await contract.connect(issuer).revokeCredential(hash));

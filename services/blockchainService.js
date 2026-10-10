@@ -3,7 +3,11 @@ import dotenv from "dotenv";
 import fs from "fs";
 
 dotenv.config();
-const abi = JSON.parse(fs.readFileSync(new URL("../config/abi.v2.json", import.meta.url)));
+const abi = [
+    ...JSON.parse(fs.readFileSync(new URL("../config/abi.v2.json", import.meta.url))),
+    "function issueCredentialForWithRsa(bytes32 credentialHash,address studentWallet,bytes signature,bytes rsaSignature)",
+    "event CredentialRsaSignature(bytes32 indexed credentialHash,address indexed university,bytes signature)",
+];
 const provider = new ethers.JsonRpcProvider(
     process.env.POLYGON_RPC_URL,
     undefined,
@@ -22,13 +26,35 @@ export async function credentialExists(hash) { return reader.credentialExists(ha
 export async function issueCredential(hash, student) {
     const tx = await contract.issueCredential(hash, student); await tx.wait(); return tx.hash;
 }
-export async function issueCredentialFor(hash, student, signature) {
-    const tx = await contract.issueCredentialFor(hash, student, signature); await tx.wait(); return tx.hash;
+export async function issueCredentialFor(hash, student, signature, rsaSignature) {
+    const rsaSignatureBytes = `0x${Buffer.from(rsaSignature, "base64").toString("hex")}`;
+    const tx = await contract.issueCredentialForWithRsa(hash, student, signature, rsaSignatureBytes);
+    await tx.wait();
+    return tx.hash;
+}
+
+
+export async function getCredentialRsaSignature(txHash, hash, issuer) {
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt) throw new Error("Credential transaction receipt not found");
+    for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== contractAddress.toLowerCase()) continue;
+        try {
+            const parsed = contract.interface.parseLog(log);
+            if (parsed?.name === "CredentialRsaSignature"
+                && parsed.args.credentialHash.toLowerCase() === hash.toLowerCase()
+                && parsed.args.university.toLowerCase() === issuer.toLowerCase()) {
+                return parsed.args.signature;
+            }
+        } catch { /* Ignore unrelated CredVault events. */ }
+    }
+    return null;
 }
 export async function revokeCredential(hash) {
     const tx = await contract.revokeCredential(hash); await tx.wait(); return tx.hash;
 }
 export async function isAuthorizedUniversity(address) { return reader.authorizedUniversities(address); }
+export async function getProposalCount() { return Number(await reader.proposalCount()); }
 export async function getValidators() {
     const [addresses, required, unanimous, count] = await Promise.all([
         reader.getValidators(), reader.requiredApprovals(), reader.unanimous(), reader.validatorCount(),

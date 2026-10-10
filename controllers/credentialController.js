@@ -1,7 +1,7 @@
 import { hashFile } from "../utils/hashFile.js";
 import {
-    issueCredential,
     issueCredentialFor,
+    getCredentialRsaSignature,
     credentialExists,
     verifyWithIssuer,
     revokeCredential as revokeOnChain,
@@ -9,6 +9,7 @@ import {
 } from "../services/blockchainService.js";
 import supabase from "../services/supabaseService.js";
 import fs from "fs";
+import crypto from "crypto";
 
 import {
     bloomFilter,
@@ -45,6 +46,24 @@ export async function issue(req, res) {
 
         const documentHash = hashFile(req.file.path);
 
+        const rsaSignature = String(req.body.rsa_signature || "");
+        const { data: issuerKey, error: issuerKeyError } = await supabase.from("issuer_registry1")
+            .select("rsa_public_key").eq("wallet_address", req.university.wallet.toLowerCase()).single();
+        if (issuerKeyError) throw issuerKeyError;
+        if (!issuerKey?.rsa_public_key || !rsaSignature || !req.body.issuer_signature) {
+            fs.unlink(req.file.path, () => {});
+            return res.status(400).json({ success: false, message: "University RSA key and certificate signature are required" });
+        }
+        const rsaValid = crypto.verify("sha256", Buffer.from(documentHash.slice(2), "hex"), {
+            key: issuerKey.rsa_public_key,
+            padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+            saltLength: 32,
+        }, Buffer.from(rsaSignature, "base64"));
+        if (!rsaValid) {
+            fs.unlink(req.file.path, () => {});
+            return res.status(400).json({ success: false, message: "RSA certificate signature is invalid" });
+        }
+
         const { error: uploadError } = await supabase.storage
             .from("certificates")
             .upload(fileName, fs.readFileSync(req.file.path), {
@@ -66,9 +85,7 @@ export async function issue(req, res) {
             return res.status(409).json({ success: false, message: "This certificate PDF already exists on-chain" });
         }
 
-        const txHash = req.body.issuer_signature
-            ? await issueCredentialFor(documentHash, student_wallet, req.body.issuer_signature)
-            : await issueCredential(documentHash, student_wallet);
+        const txHash = await issueCredentialFor(documentHash, student_wallet, req.body.issuer_signature, rsaSignature);
 
         const { error } = await supabase.from("credentials").insert({
             document_hash: documentHash,
@@ -162,19 +179,34 @@ console.log(
 
         const { data: cred } = await supabase
             .from("credentials")
-            .select("id, student_name, student_email, register_number, degree, branch, institution, issue_date, university_wallet")
+            .select("id, student_name, student_email, register_number, degree, branch, institution, issue_date, university_wallet, tx_hash")
             .eq("document_hash", documentHash)
             .single();
 
         const { data: uni } = await supabase
             .from("issuer_registry1")
-            .select("name")
+            .select("name, rsa_public_key")
             .eq("wallet_address", String(issuedBy || "").toLowerCase())
             .single();
 
+        let rsaSignaturePresent = false;
+        let rsaVerified = null;
+        if (cred?.tx_hash) {
+            const signedHash = await getCredentialRsaSignature(cred.tx_hash, documentHash, String(issuedBy));
+            if (signedHash) {
+                rsaSignaturePresent = true;
+                rsaVerified = Boolean(uni?.rsa_public_key) && crypto.verify("sha256", Buffer.from(documentHash.slice(2), "hex"), {
+                    key: uni?.rsa_public_key,
+                    padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+                    saltLength: 32,
+                }, Buffer.from(signedHash.slice(2), "hex"));
+            }
+        }
+
         res.json({
             success: true,
-            status: revoked ? "REVOKED" : "VALID",
+            status: rsaSignaturePresent && !rsaVerified ? "INVALID" : revoked ? "REVOKED" : "VALID",
+            message: rsaSignaturePresent && !rsaVerified ? "RSA issuer signature could not be verified" : undefined,
             credentialHash: documentHash,
             credentialId: cred?.id || null,
             onChain: {
@@ -185,6 +217,8 @@ console.log(
                 revoked,
                 issuerAuthorized,
                 issuerValidated: Boolean(issuerAuthorized),
+                rsaSignaturePresent,
+                rsaSignatureVerified: rsaVerified,
             },
             metadata: cred || null,
         });

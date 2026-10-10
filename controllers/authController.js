@@ -9,6 +9,7 @@ import { isAuthorizedUniversity } from "../services/blockchainService.js";
 import supabase from "../services/supabaseService.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { createPublicKey } from "crypto";
 
 dotenv.config();
 
@@ -107,5 +108,40 @@ export async function login(req, res) {
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+export async function getIssuerRsaKey(req, res) {
+    try {
+        const { data, error } = await supabase.from("issuer_registry1")
+            .select("rsa_public_key").eq("wallet_address", req.university.wallet.toLowerCase()).single();
+        if (error) throw error;
+        res.json({ success: true, publicKey: data.rsa_public_key || null });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+export async function registerIssuerRsaKey(req, res) {
+    try {
+        const publicKey = String(req.body.publicKey || "");
+        const key = createPublicKey(publicKey);
+        if (key.asymmetricKeyType !== "rsa" || (key.asymmetricKeyDetails?.modulusLength || 0) < 2048) {
+            return res.status(400).json({ success: false, message: "RSA public key must be at least 2048 bits" });
+        }
+        const wallet = req.university.wallet.toLowerCase();
+        const { data, error: readError } = await supabase.from("issuer_registry1")
+            .select("rsa_public_key").eq("wallet_address", wallet).single();
+        if (readError) throw readError;
+        if (data.rsa_public_key && data.rsa_public_key !== publicKey) {
+            return res.status(409).json({ success: false, message: "An RSA key is already registered for this university" });
+        }
+        if (!data.rsa_public_key) {
+            const { error } = await supabase.from("issuer_registry1").update({ rsa_public_key: publicKey }).eq("wallet_address", wallet);
+            if (error) throw error;
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
     }
 }

@@ -71,6 +71,7 @@ create table if not exists public.issuer_registry1 (
   contact_email text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'removed')),
   proposal_id bigint,
+  rsa_public_key text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

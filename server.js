@@ -1,4 +1,3 @@
-
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -16,6 +15,10 @@ import supabase from "./services/supabaseService.js";
 import { initializeBloomFilter } from "./utils/bloomFilter.js";
 
 dotenv.config();
+
+if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is required. Set it in the backend environment before starting the server.");
+}
 
 // Debug environment variables without exposing secrets
 console.log("SMTP_HOST configured:", Boolean(process.env.SMTP_HOST));

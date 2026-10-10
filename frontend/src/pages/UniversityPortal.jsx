@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import API from "../api/client";
+import { signIssuerCertificateHash } from "../utils/issuerRsa";
 import universityBg from "../assets/university.png";
 import { AMOY_CHAIN_HEX, AMOY_NETWORK, CONTRACT_ADDRESS, VOTING_ABI } from "../config/contractV2";
 
@@ -152,6 +153,7 @@ function IssueForm({ university, onIssued }) {
       const fileHash = `0x${Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))).map(b => b.toString(16).padStart(2, "0")).join("")}`;
       const digest = ethers.solidityPackedKeccak256(["address", "uint256", "bytes32", "address"], [CONTRACT_ADDRESS, chainId, fileHash, form.student_wallet]);
       fd.append("issuer_signature", await signer.signMessage(ethers.getBytes(digest)));
+      fd.append("rsa_signature", await signIssuerCertificateHash(issuer, fileHash, API));
 
       const { data } = await API.post("/api/credentials/issue", fd);
       setResult(data);

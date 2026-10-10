@@ -19,17 +19,13 @@ function StatusBadge({ status }) {
   return <span className={`badge ${cls}`}>{normalized}</span>;
 }
 
-/*function formatDate(value) {
-  return value ? new Date(value).toLocaleString() : "-";
-}*/
 function formatDate(value) {
   if (!value) return "-";
 
-  const utcValue = value.endsWith("Z")
-    ? value
-    : `${value}Z`;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
 
-  return new Date(utcValue).toLocaleString("en-IN", {
+  return date.toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
     day: "2-digit",
     month: "short",
@@ -265,7 +261,7 @@ export default function VerifyPortal() {
   const statusConfig = {
     VALID: { label: "Certificate Valid", cls: "alert-success" },
     REVOKED: { label: "Revoked - Certificate was revoked by the university", cls: "alert-warning" },
-    INVALID: { label: "Invalid - Not found on blockchain", cls: "alert-error" },
+    INVALID: { label: "Invalid - certificate proof could not be verified", cls: "alert-error" },
   };
 
   const currentRequest = result?.credentialId
@@ -421,6 +417,7 @@ disabled={passwordLoading}
                 <>
                   <div className={`alert ${cfg.cls}`} style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>
                     {cfg.label}
+                    {result.message && <div style={{ fontWeight: 400, fontSize: ".85rem", marginTop: ".4rem" }}>{result.message}</div>}
                   </div>
 
                   {result.status !== "INVALID" && result.onChain && (
@@ -431,6 +428,7 @@ disabled={passwordLoading}
                           { label: "Status", value: result.status },
                           { label: "Issuing University", value: result.onChain.issuingUniversity || result.onChain.issuedBy },
                           { label: "Issuer approved by validators", value: result.onChain.issuerAuthorized ? "Yes" : "No" },
+                          { label: "University RSA signature", value: result.onChain.rsaSignatureVerified === null ? "Not available (legacy credential)" : result.onChain.rsaSignatureVerified ? "Verified" : "Failed" },
                           { label: "Issued At", value: result.onChain.issuedAt ? new Date(result.onChain.issuedAt).toLocaleString() : "-" },
                           { label: "Student Wallet", value: result.onChain.studentWallet, mono: true },
                         ].map(({ label, value, mono }) => (

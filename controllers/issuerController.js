@@ -1,5 +1,5 @@
 import supabase from "../services/supabaseService.js";
-import { getValidators, getProposal, parseVotingReceipt } from "../services/blockchainService.js";
+import { getValidators, getProposal, getProposalCount, isAuthorizedUniversity, parseVotingReceipt } from "../services/blockchainService.js";
 
 export async function listValidators(req, res) {
   try {
@@ -15,7 +15,29 @@ export async function listProposals(req, res) {
   try {
     const { data, error } = await supabase.from("issuer_proposals1").select("*,issuer_votes1(*)").order("proposal_id", { ascending: false });
     if (error) throw error;
-    res.json({ success: true, proposals: data || [] });
+    const storedProposals = new Map((data || []).map((proposal) => [String(proposal.proposal_id), proposal]));
+    const proposalCount = await getProposalCount();
+    const proposals = await Promise.all(Array.from({ length: proposalCount }, async (_, index) => {
+      const proposalId = index + 1;
+      const chainProposal = await getProposal(proposalId);
+      const storedProposal = storedProposals.get(String(proposalId));
+      const matchingStoredProposal = storedProposal
+        && chainProposal.candidate.toLowerCase() === storedProposal.candidate_wallet.toLowerCase()
+        ? storedProposal
+        : {};
+      return {
+        ...matchingStoredProposal,
+        proposal_id: proposalId,
+        candidate_wallet: chainProposal.candidate.toLowerCase(),
+        is_removal: chainProposal.isRemoval,
+        status: chainProposal.status,
+        approvals: chainProposal.approvals,
+        rejections: chainProposal.rejections,
+        required: chainProposal.required,
+        total_validators: chainProposal.totalValidators,
+      };
+    }));
+    res.json({ success: true, proposals });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 }
 
@@ -23,7 +45,11 @@ export async function listIssuers(req, res) {
   try {
     const { data, error } = await supabase.from("issuer_registry1").select("id,name,wallet_address,contact_email,status,proposal_id,created_at").eq("status", "approved").order("created_at", { ascending: false });
     if (error) throw error;
-    res.json({ success: true, universities: data || [], issuers: data || [] });
+    const issuers = await Promise.all((data || []).map(async (issuer) => (
+      await isAuthorizedUniversity(issuer.wallet_address) ? issuer : null
+    )));
+    const authorizedIssuers = issuers.filter(Boolean);
+    res.json({ success: true, universities: authorizedIssuers, issuers: authorizedIssuers });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 }
 
@@ -63,12 +89,13 @@ export async function syncVotingTransaction(req, res) {
       const { error } = await supabase.from("issuer_registry1").upsert(info, { onConflict: "wallet_address" });
       if (error) throw error;
     }
-    if (p.status !== "open") {
-      const targetTable = "issuer_registry1";
-      const { error } = await supabase.from(targetTable).update({ status: p.isRemoval ? "removed" : p.status, updated_at: new Date().toISOString() }).eq("wallet_address", candidate);
-      if (error && !p.isRemoval) throw error;
+    if (p.status !== "open" && (!p.isRemoval || p.status === "approved")) {
+      const status = p.isRemoval ? "removed" : p.status;
+      const { error } = await supabase.from("issuer_registry1")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("wallet_address", candidate);
+      if (error) throw error;
     }
     res.json({ success: true, proposalId: id, proposal: p, txHash });
   } catch (err) { console.error(err); res.status(400).json({ success: false, message: err.message }); }
 }
-
