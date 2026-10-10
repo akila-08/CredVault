@@ -73,6 +73,7 @@ export async function registerVerifier(req, res) {
             if (error) throw error;
 
             let emailSent = false;
+            let emailError = null;
             try {
                 emailSent = await sendVerifierWelcomeEmail({
                     email,
@@ -80,7 +81,8 @@ export async function registerVerifier(req, res) {
                     password: temporaryPassword,
                 });
             } catch (mailError) {
-                console.error("Verifier email failed:", mailError);
+                emailError = mailError.message;
+                console.error("Verifier email failed:", emailError);
             }
 
             await recordAccessHistory({
@@ -98,6 +100,7 @@ export async function registerVerifier(req, res) {
                 success: true,
                 verifier: data,
                 emailSent,
+                emailError,
                 temporaryPassword: emailSent ? undefined : temporaryPassword,
             });
         }
@@ -121,6 +124,7 @@ export async function registerVerifier(req, res) {
         }
 
         let emailSent = false;
+        let emailError = null;
         try {
             emailSent = await sendVerifierWelcomeEmail({
                 email,
@@ -128,7 +132,8 @@ export async function registerVerifier(req, res) {
                 password: temporaryPassword,
             });
         } catch (mailError) {
-            console.error("Verifier email failed:", mailError);
+            emailError = mailError.message;
+            console.error("Verifier email failed:", emailError);
         }
 
         await recordAccessHistory({
@@ -146,6 +151,69 @@ export async function registerVerifier(req, res) {
             success: true,
             verifier: data,
             emailSent,
+            emailError,
+            temporaryPassword: emailSent ? undefined : temporaryPassword,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+export async function resendVerifierWelcomeEmail(req, res) {
+    try {
+        const { id } = req.params;
+        const { data: verifier, error: findError } = await supabase
+            .from("verifiers")
+            .select("id, organization_name, email, is_active")
+            .eq("id", id)
+            .maybeSingle();
+
+        if (findError) throw findError;
+        if (!verifier) {
+            return res.status(404).json({ success: false, message: "Verifier not found" });
+        }
+        if (!verifier.is_active) {
+            return res.status(409).json({ success: false, message: "Cannot resend credentials to an inactive verifier" });
+        }
+
+        const temporaryPassword = generateTemporaryPassword();
+        const { error: updateError } = await supabase
+            .from("verifiers")
+            .update({
+                password_hash: hashPassword(temporaryPassword),
+                password_changed_at: null,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", verifier.id);
+
+        if (updateError) throw updateError;
+
+        let emailSent = false;
+        let emailError = null;
+        try {
+            emailSent = await sendVerifierWelcomeEmail({
+                email: verifier.email,
+                organizationName: verifier.organization_name,
+                password: temporaryPassword,
+            });
+        } catch (mailError) {
+            emailError = mailError.message;
+            console.error("Verifier email failed:", emailError);
+        }
+
+        await recordAccessHistory({
+            entityType: "verifier",
+            entityId: verifier.id,
+            entityKey: verifier.email,
+            action: "credentials_resent",
+            details: { emailSent },
+        });
+
+        res.json({
+            success: true,
+            emailSent,
+            emailError,
             temporaryPassword: emailSent ? undefined : temporaryPassword,
         });
     } catch (err) {

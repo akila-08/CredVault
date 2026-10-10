@@ -23,6 +23,15 @@ create index if not exists credentials_student_email_idx on public.credentials (
 create index if not exists credentials_student_wallet_idx on public.credentials (student_wallet);
 create index if not exists credentials_university_wallet_idx on public.credentials (university_wallet);
 
+create table if not exists public.performance_runs (
+  id uuid primary key default gen_random_uuid(),
+  run_type text not null check (run_type in ('gas', 'search')),
+  sample_count integer not null default 0,
+  metrics jsonb not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists performance_runs_created_at_idx on public.performance_runs (created_at desc);
+
 create table if not exists public.verifiers (
   id uuid primary key default gen_random_uuid(),
   organization_name text not null,
@@ -112,6 +121,7 @@ create table if not exists public.validators1 (
 );
 
 alter table public.credentials enable row level security;
+alter table public.performance_runs enable row level security;
 alter table public.verifiers enable row level security;
 alter table public.access_history enable row level security;
 alter table public.verification_requests enable row level security;

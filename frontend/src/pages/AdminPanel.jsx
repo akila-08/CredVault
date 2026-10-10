@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import API from "../api/client";
 import adminBg from "../assets/admin.png";
 import IssuerVoting from "../components/IssuerVoting";
+import PerformanceDashboard from "../components/PerformanceDashboard";
 
 const portalBg = {
   backgroundImage: `linear-gradient(135deg, rgba(7,20,60,0.72) 0%, rgba(10,30,80,0.65) 100%), url(${adminBg})`,
@@ -21,10 +22,11 @@ export default function AdminPanel() {
   const [universities, setUniversities] = useState([]);
   const [verifiers, setVerifiers] = useState([]);
   const [verifierForm, setVerifierForm] = useState({ organization_name: "", email: "" });
-  const [temporaryPassword, setTemporaryPassword] = useState(null);
+  const [temporaryCredentials, setTemporaryCredentials] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [addingVerifier, setAddingVerifier] = useState(false);
+  const [resendingVerifier, setResendingVerifier] = useState(null);
   const [removingVerifier, setRemovingVerifier] = useState(null);
 
 
@@ -85,7 +87,7 @@ export default function AdminPanel() {
   async function handleAddVerifier(e) {
     e.preventDefault();
     setAddingVerifier(true);
-    setTemporaryPassword(null);
+    setTemporaryCredentials(null);
     try {
       const { data } = await API.post("/api/verifiers", verifierForm, {
         headers: { "x-admin-key": adminKey },
@@ -93,8 +95,8 @@ export default function AdminPanel() {
       if (data.emailSent) {
         toast.success(`Verifier login sent to ${verifierForm.email}`);
       } else {
-        toast.success("Verifier registered. Configure SMTP to send emails automatically.");
-        setTemporaryPassword(data.temporaryPassword);
+        toast.error(`Verifier registered, but the welcome email was not sent: ${data.emailError || "Check the backend mail configuration."}`);
+        setTemporaryCredentials({ email: verifierForm.email, password: data.temporaryPassword });
       }
       setVerifierForm({ organization_name: "", email: "" });
       loadVerifiers();
@@ -102,6 +104,27 @@ export default function AdminPanel() {
       toast.error(err.response?.data?.message || err.message);
     } finally {
       setAddingVerifier(false);
+    }
+  }
+
+  async function handleResendVerifierEmail(verifier) {
+    if (!confirm(`Resend setup credentials to ${verifier.email}? This resets their current password.`)) return;
+    setResendingVerifier(verifier.id);
+    setTemporaryCredentials(null);
+    try {
+      const { data } = await API.post(`/api/verifiers/${verifier.id}/resend-welcome-email`, {}, {
+        headers: { "x-admin-key": adminKey },
+      });
+      if (data.emailSent) {
+        toast.success(`Setup email sent to ${verifier.email}. They can change the password from Profile after signing in.`);
+      } else {
+        toast.error(`Password was reset, but the email was not sent: ${data.emailError || "Check the backend mail configuration."}`);
+        setTemporaryCredentials({ email: verifier.email, password: data.temporaryPassword });
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setResendingVerifier(null);
     }
   }
 
@@ -196,11 +219,19 @@ export default function AdminPanel() {
             <h3 style={{ color: "#f1f5f9", marginBottom: "0.5rem" }}>Issuer Voting</h3>
             <p>Propose issuers and vote with your validator wallet on Polygon Amoy.</p>
           </button>
+          <button
+            className={`card${activeSection === "performance" ? " active-admin-card" : ""}`}
+            onClick={() => setActiveSection("performance")}
+            style={{ textAlign: "left", cursor: "pointer" }}
+          >
+            <h3 style={{ color: "#f1f5f9", marginBottom: "0.5rem" }}>Performance Dashboard</h3>
+            <p>Review gas costs, certificate search timings, and Bloom filter activity.</p>
+          </button>
         </div>
 
         {!activeSection && (
           <div className="alert alert-warning">
-            Select University, Verifier, or Issuer Voting to continue.
+            Select a dashboard or management section to continue.
           </div>
         )}
 
@@ -245,6 +276,8 @@ export default function AdminPanel() {
 
         {activeSection === "voting" && <IssuerVoting adminKey={adminKey} />}
 
+        {activeSection === "performance" && <PerformanceDashboard adminKey={adminKey} />}
+
         {activeSection === "verifier" && (
           <>
             <div className="card admin-card">
@@ -268,9 +301,9 @@ disabled={addingVerifier}
                   {addingVerifier ? <><span className="spinner" /> Adding...</> : "Add Verifier"}
                 </button>
               </form>
-              {temporaryPassword && (
+              {temporaryCredentials && (
                 <div className="alert alert-warning" style={{ marginTop: "1.5rem" }}>
-                  SMTP is not configured, so the password was not emailed. Temporary password: <span className="mono">{temporaryPassword}</span>
+                  The welcome email to {temporaryCredentials.email} could not be delivered. Share this temporary password securely and ask the verifier to change it from Profile after signing in: <span className="mono">{temporaryCredentials.password}</span>
                 </div>
               )}
             </div>
@@ -292,7 +325,7 @@ disabled={addingVerifier}
                         <th>Email</th>
                         <th>Registered</th>
                         <th>Password Changed</th>
-                        <th>Action</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -303,13 +336,22 @@ disabled={addingVerifier}
                           <td>{new Date(v.created_at).toLocaleDateString()}</td>
                           <td>{v.password_changed_at ? new Date(v.password_changed_at).toLocaleDateString() : "-"}</td>
                           <td>
-                            <button
-                              className="btn btn-danger btn-sm"
-                              disabled={removingVerifier === v.id}
-                              onClick={() => handleRemoveVerifier(v.id, v.organization_name)}
-                            >
-                              {removingVerifier === v.id ? <span className="spinner" /> : "Remove"}
-                            </button>
+                            <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
+                              <button
+                                className="btn btn-outline btn-sm"
+                                disabled={resendingVerifier === v.id}
+                                onClick={() => handleResendVerifierEmail(v)}
+                              >
+                                {resendingVerifier === v.id ? <span className="spinner" /> : "Resend setup email"}
+                              </button>
+                              <button
+                                className="btn btn-danger btn-sm"
+                                disabled={removingVerifier === v.id}
+                                onClick={() => handleRemoveVerifier(v.id, v.organization_name)}
+                              >
+                                {removingVerifier === v.id ? <span className="spinner" /> : "Remove"}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

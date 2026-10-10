@@ -96,11 +96,24 @@ class BloomFilter {
     }
 
     getStats() {
+        let occupiedBits = 0;
+        for (const byte of this.bits) {
+            let value = byte;
+            while (value) {
+                occupiedBits += value & 1;
+                value >>>= 1;
+            }
+        }
+        const bitOccupancy = occupiedBits / this.bitSize;
+        const estimatedFalsePositiveRate = (1 - Math.exp(-this.hashCount * this.itemCount / this.bitSize)) ** this.hashCount;
         return {
             itemCount: this.itemCount,
             bitSize: this.bitSize,
             hashCount: this.hashCount,
             memoryBytes: this.bits.length,
+            occupiedBits,
+            bitOccupancy,
+            estimatedFalsePositiveRate,
             targetFalsePositiveRate: FALSE_POSITIVE_RATE,
         };
     }
@@ -109,11 +122,13 @@ class BloomFilter {
 export const bloomFilter = new BloomFilter();
 
 let bloomReady = false;
+let bloomInitError = null;
 
 // Load all existing certificate hashes from Supabase.
 // Pagination is important because Supabase may limit each response.
 export async function initializeBloomFilter(supabase) {
     bloomReady = false;
+    bloomInitError = null;
     bloomFilter.clear();
 
     const batchSize = 1000;
@@ -145,6 +160,7 @@ export async function initializeBloomFilter(supabase) {
         }
 
         bloomReady = true;
+        bloomInitError = null;
 
         console.log(
             "Bloom Filter initialized:",
@@ -153,6 +169,7 @@ export async function initializeBloomFilter(supabase) {
     } catch (error) {
         bloomFilter.clear();
         bloomReady = false;
+        bloomInitError = error.message;
 
         console.error(
             "Bloom Filter initialization failed:",
@@ -163,4 +180,8 @@ export async function initializeBloomFilter(supabase) {
 
 export function isBloomReady() {
     return bloomReady;
+}
+
+export function getBloomStatus() {
+    return { ready: bloomReady, error: bloomInitError, stats: bloomFilter.getStats() };
 }
