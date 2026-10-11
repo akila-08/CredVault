@@ -14,10 +14,15 @@ const portalBg = {
   minHeight: "100vh",
 };
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || "https://exsfyygqvvdwyjeuiesd.supabase.co")
+  .trim()
+  .replace(/^["']|["']$/g, "");
+
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4c2Z5eWdxdnZkd3lqZXVpZXNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTAyNzUsImV4cCI6MjEwNzE4NjI3NX0.uMRWwxt8LU3lUviTMhhRTrkajCmV6aCsWbQZ5qTex8A")
+  .trim()
+  .replace(/^["']|["']$/g, "");
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 function StatusBadge({ status }) {
   const normalized = String(status || "pending").toLowerCase();
