@@ -171,10 +171,12 @@ export async function initializeBloomFilter(supabase) {
         bloomReady = false;
         bloomInitError = error.message;
 
-        console.error(
-            "Bloom Filter initialization failed:",
-            error.message
-        );
+        console.error("Bloom Filter initialization failed:", {
+    message: error.message,
+    code: error.code,
+    details: error.details,
+    hint: error.hint,
+});
     }
 }
 

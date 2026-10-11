@@ -31,6 +31,7 @@ const app = express();
 const allowedOrigins = [
     "http://localhost:5173",
     "https://cred-vault-blockchain.vercel.app",
+    "https://cred-vault-3xnh.vercel.app",
 ];
 
 // CORS configuration
