@@ -270,11 +270,56 @@ function IssueForm({ university, onIssued }) {
 
       const digest = ethers.solidityPackedKeccak256(["address", "uint256", "bytes32", "address"], [CONTRACT_ADDRESS, chainId, fileHash, form.student_wallet]);
 
-      fd.append("issuer_signature", await signer.signMessage(ethers.getBytes(digest)));
+      
+const issuerSignature = await signer.signMessage(
+    ethers.getBytes(digest)
+);
 
-      fd.append("rsa_signature", await signIssuerCertificateHash(issuer, fileHash, API));
+const rsaSignature = await signIssuerCertificateHash(
+    issuer,
+    fileHash,
+    API
+);
 
-      const { data } = await API.post("/api/credentials/issue", fd);
+fd.append("issuer_signature", issuerSignature);
+fd.append("rsa_signature", rsaSignature);
+
+// Submit the issuance transaction through the university's MetaMask wallet.
+const issuanceContract = new ethers.Contract(
+    CONTRACT_ADDRESS,
+    [
+        "function issueCredentialForWithRsa(bytes32 credentialHash,address studentWallet,bytes signature,bytes rsaSignature)",
+    ],
+    signer
+);
+
+const tx = await issuanceContract.issueCredentialForWithRsa(
+    fileHash,
+    form.student_wallet,
+    issuerSignature,
+    `0x${Array.from(
+        Uint8Array.from(atob(rsaSignature), c => c.charCodeAt(0))
+    ).map(b => b.toString(16).padStart(2, "0")).join("")}`
+);
+
+toast.loading("Waiting for blockchain confirmation...", {
+    id: "issue-certificate",
+});
+
+const receipt = await tx.wait(1);
+
+if (!receipt || receipt.status !== 1) {
+    throw new Error("Certificate issuance transaction failed");
+}
+
+// Send the confirmed transaction hash to the backend for verification
+// and Supabase metadata storage.
+fd.append("txHash", tx.hash);
+
+const { data } = await API.post("/api/credentials/issue", fd);
+
+toast.dismiss("issue-certificate");
+
 
       setResult(data);
 

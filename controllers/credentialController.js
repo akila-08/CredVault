@@ -1,6 +1,7 @@
 import { hashFile } from "../utils/hashFile.js";
 import {
-    issueCredentialFor,
+    // issueCredentialFor,
+     verifyIssuanceReceipt,
     getCredentialRsaSignature,
     credentialExists,
     verifyWithIssuer,
@@ -63,6 +64,16 @@ export async function issue(req, res) {
             fs.unlink(req.file.path, () => {});
             return res.status(400).json({ success: false, message: "RSA certificate signature is invalid" });
         }
+        const txHash = await verifyIssuanceReceipt(
+    req.body.txHash,
+    documentHash,
+    student_wallet,
+    universityWallet,
+    req.body.issuer_signature,
+    rsaSignature
+);
+
+        
 
         const { error: uploadError } = await supabase.storage
             .from("certificates")
@@ -79,13 +90,13 @@ export async function issue(req, res) {
 
         const certificateUrl = publicUrlData.publicUrl;
 
-        const exists = await credentialExists(documentHash);
-        if (exists) {
-            fs.unlink(req.file.path, () => {});
-            return res.status(409).json({ success: false, message: "This certificate PDF already exists on-chain" });
-        }
+        // const exists = await credentialExists(documentHash);
+        // if (exists) {
+        //     fs.unlink(req.file.path, () => {});
+        //     return res.status(409).json({ success: false, message: "This certificate PDF already exists on-chain" });
+        // }
 
-        const txHash = await issueCredentialFor(documentHash, student_wallet, req.body.issuer_signature, rsaSignature);
+        // const txHash = await issueCredentialFor(documentHash, student_wallet, req.body.issuer_signature, rsaSignature);
 
         const { error } = await supabase.from("credentials").insert({
             document_hash: documentHash,

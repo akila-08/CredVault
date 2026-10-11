@@ -91,3 +91,103 @@ export async function verifyRevocationReceipt(txHash, credentialHash, issuerAddr
     if (!matched) throw new Error("Transaction does not contain a matching issuer revocation");
     return txHash;
 }
+
+export async function verifyIssuanceReceipt(
+    txHash,
+    credentialHash,
+    studentWallet,
+    issuerWallet,
+    issuerSignature,
+    rsaSignatureBase64
+) {
+    if (!txHash || !ethers.isHexString(txHash, 32)) {
+        throw new Error("A valid issuance transaction hash is required");
+    }
+
+    const [tx, receipt, network] = await Promise.all([
+        provider.getTransaction(txHash),
+        provider.getTransactionReceipt(txHash),
+        provider.getNetwork(),
+    ]);
+
+    if (!tx || !receipt) {
+        throw new Error("Issuance transaction or receipt not found");
+    }
+
+    if (receipt.status !== 1) {
+        throw new Error("Issuance transaction failed on-chain");
+    }
+
+    if (tx.to?.toLowerCase() !== contractAddress.toLowerCase()) {
+        throw new Error("Transaction targets the wrong contract");
+    }
+
+    if (tx.from.toLowerCase() !== issuerWallet.toLowerCase()) {
+        throw new Error("Transaction was not sent by the university wallet");
+    }
+
+    if (Number(network.chainId) !== 80002 || Number(tx.chainId) !== 80002) {
+        throw new Error("Transaction is not on Polygon Amoy");
+    }
+
+    const parsedTx = contract.interface.parseTransaction({
+        data: tx.data,
+        value: tx.value,
+    });
+
+    if (!parsedTx || parsedTx.name !== "issueCredentialForWithRsa") {
+        throw new Error("Transaction is not a certificate issuance transaction");
+    }
+
+    const args = parsedTx.args;
+
+    if (args[0].toLowerCase() !== credentialHash.toLowerCase()) {
+        throw new Error("Transaction credential hash does not match the PDF");
+    }
+
+    if (args[1].toLowerCase() !== studentWallet.toLowerCase()) {
+        throw new Error("Transaction student wallet does not match the submitted details");
+    }
+
+    if (String(args[2]).toLowerCase() !== issuerSignature.toLowerCase()) {
+        throw new Error("Transaction issuer signature does not match");
+    }
+
+    const rsaSignatureBytes =
+        `0x${Buffer.from(rsaSignatureBase64, "base64").toString("hex")}`;
+
+    if (String(args[3]).toLowerCase() !== rsaSignatureBytes.toLowerCase()) {
+        throw new Error("Transaction RSA signature does not match");
+    }
+
+    const events = receipt.logs
+        .filter(log => log.address.toLowerCase() === contractAddress.toLowerCase())
+        .map(log => {
+            try {
+                return contract.interface.parseLog(log);
+            } catch {
+                return null;
+            }
+        })
+        .filter(Boolean);
+
+    const issued = events.some(event =>
+        event.name === "CredentialIssued" &&
+        event.args.credentialHash.toLowerCase() === credentialHash.toLowerCase() &&
+        event.args.studentWallet.toLowerCase() === studentWallet.toLowerCase() &&
+        event.args.university.toLowerCase() === issuerWallet.toLowerCase()
+    );
+
+    const rsaRecorded = events.some(event =>
+        event.name === "CredentialRsaSignature" &&
+        event.args.credentialHash.toLowerCase() === credentialHash.toLowerCase() &&
+        event.args.university.toLowerCase() === issuerWallet.toLowerCase() &&
+        String(event.args.signature).toLowerCase() === rsaSignatureBytes.toLowerCase()
+    );
+
+    if (!issued || !rsaRecorded) {
+        throw new Error("Transaction is missing the expected credential or RSA signature events");
+    }
+
+    return tx.hash;
+}
