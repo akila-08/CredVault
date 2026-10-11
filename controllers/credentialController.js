@@ -206,11 +206,47 @@ console.log(
             const signedHash = await getCredentialRsaSignature(cred.tx_hash, documentHash, String(issuedBy));
             if (signedHash) {
                 rsaSignaturePresent = true;
-                rsaVerified = Boolean(uni?.rsa_public_key) && crypto.verify("sha256", Buffer.from(documentHash.slice(2), "hex"), {
-                    key: uni?.rsa_public_key,
-                    padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
-                    saltLength: 32,
-                }, Buffer.from(signedHash.slice(2), "hex"));
+                const docBuffer = Buffer.from(documentHash.slice(2), "hex");
+                const sigBuffer = Buffer.from(signedHash.slice(2), "hex");
+
+                // 1. Try current RSA public key
+                if (uni?.rsa_public_key) {
+                    try {
+                        rsaVerified = crypto.verify("sha256", docBuffer, {
+                            key: uni.rsa_public_key,
+                            padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+                            saltLength: 32,
+                        }, sigBuffer);
+                    } catch {
+                        rsaVerified = false;
+                    }
+                }
+
+                // 2. If current key did not verify, check historical keys (preserved during key rotation)
+                if (!rsaVerified) {
+                    const { data: keyHistory } = await supabase
+                        .from("issuer_rsa_key_history")
+                        .select("rsa_public_key")
+                        .eq("wallet_address", String(issuedBy || "").toLowerCase())
+                        .order("created_at", { ascending: false });
+
+                    for (const hist of (keyHistory || [])) {
+                        if (!hist.rsa_public_key) continue;
+                        try {
+                            const valid = crypto.verify("sha256", docBuffer, {
+                                key: hist.rsa_public_key,
+                                padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+                                saltLength: 32,
+                            }, sigBuffer);
+                            if (valid) {
+                                rsaVerified = true;
+                                break;
+                            }
+                        } catch {
+                            // continue checking other historical keys
+                        }
+                    }
+                }
             }
         }
 
