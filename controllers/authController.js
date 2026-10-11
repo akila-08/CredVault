@@ -145,3 +145,68 @@ export async function registerIssuerRsaKey(req, res) {
         res.status(400).json({ success: false, message: err.message });
     }
 }
+
+
+
+// Add this exported function alongside your existing auth controllers.
+export async function rotateIssuerRsaKey(req, res) {
+  try {
+    const wallet = String(req.university?.wallet || "").toLowerCase();
+    const publicKey = String(req.body.publicKey || "");
+
+    if (!/^0x[0-9a-f]{40}$/.test(wallet)) {
+      return res.status(401).json({
+        success: false,
+        message: "University authentication required.",
+      });
+    }
+
+    let key;
+
+    try {
+      key = createPublicKey(publicKey);
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid RSA public key.",
+      });
+    }
+
+    if (
+      key.asymmetricKeyType !== "rsa" ||
+      (key.asymmetricKeyDetails?.modulusLength || 0) < 2048
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "An RSA key of at least 2048 bits is required.",
+      });
+    }
+
+    const { error } = await supabase.rpc("rotate_issuer_rsa_key", {
+      p_wallet_address: wallet,
+      p_new_public_key: publicKey,
+      p_rotation_reason: "University-authorized RSA key rotation",
+    });
+
+    if (error) {
+      console.error("RSA key rotation database error:", error.message);
+
+      return res.status(400).json({
+        success: false,
+        message: "RSA key rotation failed. Please check the server logs.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "RSA key rotated; previous public key preserved.",
+    });
+  } catch (err) {
+    console.error("RSA key rotation failed:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Could not rotate the RSA key.",
+    });
+  }
+}

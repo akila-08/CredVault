@@ -1,424 +1,788 @@
 import { useCallback, useEffect, useState } from "react";
+
 import { ethers } from "ethers";
+
 import { useDropzone } from "react-dropzone";
+
 import toast from "react-hot-toast";
+
 import API from "../api/client";
-import { signIssuerCertificateHash } from "../utils/issuerRsa";
+
 import universityBg from "../assets/university.png";
+
 import { AMOY_CHAIN_HEX, AMOY_NETWORK, CONTRACT_ADDRESS, VOTING_ABI } from "../config/contractV2";
 
+import { signIssuerCertificateHash, rotateIssuerRSAKey } from "../utils/issuerRsa";
+
 const portalBg = {
+
   backgroundImage: `linear-gradient(135deg, rgba(7,20,60,0.72) 0%, rgba(10,30,80,0.65) 100%), url(${universityBg})`,
+
   backgroundSize: "cover",
+
   backgroundPosition: "center",
+
   backgroundAttachment: "fixed",
+
   backgroundColor: "#07142a",
+
   minHeight: "100vh",
+
 };
 
 function truncate(addr) {
+
   return addr ? addr.slice(0, 6) + "..." + addr.slice(-4) : "";
+
 }
 
 function LoginStep({ onLogin }) {
+
   const [loading, setLoading] = useState(false);
 
   async function handleConnect() {
+
     if (!window.ethereum) {
+
       toast.error("MetaMask not detected. Please install MetaMask.");
+
       return;
+
     }
+
     setLoading(true);
+
     try {
+
       const provider = new ethers.BrowserProvider(window.ethereum);
+
       await provider.send("eth_requestAccounts", []);
+
       const signer = await provider.getSigner();
+
       const address = await signer.getAddress();
 
       const { data: nonceRes } = await API.get(`/api/auth/nonce/${address}`);
+
       const nonce = nonceRes.nonce;
 
       const domain = window.location.host;
+
       const origin = window.location.origin;
+
       const issuedAt = new Date().toISOString();
+
       const preparedMsg = [
+
         `${domain} wants you to sign in with your Ethereum account:`,
+
         address,
+
         "",
+
         "Sign in to CredVault University Portal",
+
         "",
+
         `URI: ${origin}`,
+
         "Version: 1",
+
         "Chain ID: 80002",
+
         `Nonce: ${nonce}`,
+
         `Issued At: ${issuedAt}`,
+
       ].join("\n");
 
       const signature = await signer.signMessage(preparedMsg);
 
       const { data: loginRes } = await API.post("/api/auth/login", {
+
         message: preparedMsg,
+
         signature,
+
         address,
+
       });
 
       localStorage.setItem("cv_uni_token", loginRes.token);
+
       localStorage.setItem("cv_uni_info", JSON.stringify(loginRes.university));
 
       localStorage.setItem(
+
         "cv_uni_expiry",
+
         (Date.now() + 24 * 60 * 60 * 1000).toString()
+
       );
 
       toast.success(`Welcome, ${loginRes.university.name}!`);
+
       onLogin(loginRes.university);
+
     } catch (err) {
+
       toast.error(err.response?.data?.message || err.message);
+
     } finally {
+
       setLoading(false);
+
     }
+
   }
 
   return (
+
     <div style={{ ...portalBg, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+
       <div style={{ maxWidth: 440, width: "100%" }}>
+
         <div className="card" style={{ textAlign: "center", padding: "3rem 2.5rem" }}>
+
           <div style={{ fontSize: "3rem", marginBottom: "1rem", color: "#60a5fa" }}>🏛️</div>
+
           <h2 style={{ marginBottom: "0.5rem", color: "#f0f6ff" }}>University Portal</h2>
+
           <p style={{ marginBottom: "2rem", color: "#93c5fd" }}>
+
             Connect your registered wallet to issue and manage student certificates.
+
             You only need to sign <strong style={{ color: "#f1f5f9" }}>once</strong> to get a 24-hour session.
+
           </p>
+
           <button className="btn btn-primary btn-full" onClick={handleConnect} disabled={loading}>
+
             {loading ? <><span className="spinner" /> Connecting...</> : "Connect Wallet"}
+
           </button>
+
           <p style={{ fontSize: "0.8rem", marginTop: "1rem", color: "#64748b" }}>
+
             Only wallets registered by admin can log in
+
           </p>
+
         </div>
+
       </div>
+
     </div>
+
   );
+
 }
 
 function IssueForm({ university, onIssued }) {
+
   const [form, setForm] = useState({
+
     student_name: "",
+
     student_email: "",
+
     register_number: "",
+
     degree: "",
+
     branch: "",
+
     issue_date: "",
+
     student_wallet: "",
+
   });
+
   const [file, setFile] = useState(null);
+
   const [loading, setLoading] = useState(false);
+
   const [result, setResult] = useState(null);
 
   const onDrop = useCallback((accepted) => {
+
     if (accepted[0]) setFile(accepted[0]);
+
   }, []);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
+
     onDrop,
+
     accept: { "application/pdf": [".pdf"] },
+
     maxFiles: 1,
+
   });
 
   function handleChange(e) {
+
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+
   }
 
   async function handleSubmit(e) {
+
     e.preventDefault();
+
     if (!file) {
+
       toast.error("Please upload the certificate PDF");
+
       return;
+
     }
 
     setLoading(true);
+
     setResult(null);
+
     try {
+
       const fd = new FormData();
+
       fd.append("certificate", file);
+
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
 
       if (!window.ethereum) throw new Error("MetaMask is required to sign credential issuance");
+
       const provider = new ethers.BrowserProvider(window.ethereum);
+
       await provider.send("eth_requestAccounts", []);
+
       try { await provider.send("wallet_switchEthereumChain", [{ chainId: AMOY_CHAIN_HEX }]); }
+
       catch (error) { if (error.code !== 4902) throw error; await provider.send("wallet_addEthereumChain", [AMOY_NETWORK]); }
+
       const signer = await provider.getSigner(), issuer = await signer.getAddress();
+
       if (issuer.toLowerCase() !== university.wallet.toLowerCase()) throw new Error("Connect the university wallet used to log in");
+
       const chainId = (await provider.getNetwork()).chainId;
+
       const fileHash = `0x${Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))).map(b => b.toString(16).padStart(2, "0")).join("")}`;
+
       const digest = ethers.solidityPackedKeccak256(["address", "uint256", "bytes32", "address"], [CONTRACT_ADDRESS, chainId, fileHash, form.student_wallet]);
+
       fd.append("issuer_signature", await signer.signMessage(ethers.getBytes(digest)));
+
       fd.append("rsa_signature", await signIssuerCertificateHash(issuer, fileHash, API));
 
       const { data } = await API.post("/api/credentials/issue", fd);
+
       setResult(data);
+
       toast.success("Certificate issued on-chain!");
+
       onIssued?.();
+
     } catch (err) {
+
       toast.error(err.response?.data?.message || err.message);
+
     } finally {
+
       setLoading(false);
+
     }
+
   }
 
   return (
+
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
       <div {...getRootProps()} className={`dropzone${isDragActive ? " active" : ""}`}>
+
         <input {...getInputProps()} />
+
         <div className="dropzone-icon">PDF</div>
+
         {file ? (
+
           <p style={{ color: "#f1f5f9" }}>{file.name}</p>
+
         ) : (
+
           <p>Drag and drop the certificate PDF here, or <span style={{ color: "#818cf8" }}>click to browse</span></p>
+
         )}
+
       </div>
 
       <div className="grid-2">
+
         {[
+
           { name: "student_name", label: "Student Name", placeholder: "John Doe" },
+
           { name: "student_email", label: "Student Email", placeholder: "student@example.com", type: "email" },
+
           { name: "register_number", label: "Register Number", placeholder: "21CS001" },
+
           { name: "degree", label: "Degree", placeholder: "B.Tech" },
+
           { name: "branch", label: "Branch", placeholder: "Computer Science" },
+
           { name: "issue_date", label: "Issue Date", placeholder: "2024-04-01", type: "date" },
+
           { name: "student_wallet", label: "Student Wallet (0x)", placeholder: "0xabc..." },
+
         ].map(({ name, label, placeholder, type }) => (
+
           <div key={name} className="input-group">
+
             <label>{label}</label>
+
             <input
+
               className="input"
+
               type={type || "text"}
+
               name={name}
+
               value={form[name]}
+
               onChange={handleChange}
+
               placeholder={placeholder}
+
               required
+
             />
+
           </div>
+
         ))}
+
       </div>
 
       <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 10, padding: "0.75rem 1rem", fontSize: "0.875rem", color: "#818cf8" }}>
+
         <strong>Issuing as:</strong> {university.name} ({truncate(university.wallet)})
+
       </div>
 
       <button
+
 type="submit"
+
 className="btn btn-primary issue-btn"
+
 disabled={loading}
+
 >
+
         {loading ? <><span className="spinner" /> Issuing...</> : "Issue Certificate on-chain"}
+
       </button>
 
       {result && (
+
         <div className="alert alert-success">
+
           <div>
+
             <p style={{ color: "#86efac", fontWeight: 600 }}>Certificate issued successfully!</p>
+
             <p style={{ fontSize: "0.8rem", marginTop: "0.5rem" }}>
+
               <span className="mono">Tx: {result.txHash}</span>
+
             </p>
+
           </div>
+
         </div>
+
       )}
+
     </form>
+
   );
+
 }
 
 function IssuedList({ refresh }) {
+
   const [creds, setCreds] = useState([]);
+
   const [loading, setLoading] = useState(true);
+
   const [revoking, setRevoking] = useState(null);
 
   async function load() {
+
     setLoading(true);
+
     try {
+
       const { data } = await API.get("/api/credentials/university");
+
       setCreds(data.credentials);
+
     } catch (err) {
+
       toast.error(err.response?.data?.message || err.message);
+
     } finally {
+
       setLoading(false);
+
     }
+
   }
 
   useEffect(() => {
+
     load();
+
   }, [refresh]);
 
   async function handleRevoke(credential_hash, name) {
+
     if (!confirm(`Revoke certificate for ${name}? This action is irreversible on-chain.`)) return;
+
     setRevoking(credential_hash);
+
     try {
+
       if (!window.ethereum) throw new Error("MetaMask is required to revoke credentials");
+
       const provider = new ethers.BrowserProvider(window.ethereum);
+
       await provider.send("eth_requestAccounts", []);
+
       try { await provider.send("wallet_switchEthereumChain", [{ chainId: AMOY_CHAIN_HEX }]); }
+
       catch (error) { if (error.code !== 4902) throw error; await provider.send("wallet_addEthereumChain", [AMOY_NETWORK]); }
+
       const signer = await provider.getSigner();
+
       if ((await signer.getAddress()).toLowerCase() !== JSON.parse(localStorage.getItem("cv_uni_info")).wallet.toLowerCase()) throw new Error("Connect the university wallet used to log in");
+
       const contract = new ethers.Contract(CONTRACT_ADDRESS, ["function revokeCredential(bytes32 credentialHash)"], signer);
+
       const tx = await contract.revokeCredential(credential_hash);
+
       await tx.wait(1);
+
       await API.post("/api/credentials/revoke", { credential_hash, txHash: tx.hash });
+
       toast.success("Certificate revoked on-chain");
+
       load();
+
     } catch (err) {
+
       toast.error(err.response?.data?.message || err.message);
+
     } finally {
+
       setRevoking(null);
+
     }
+
   }
 
   if (loading) return <div style={{ textAlign: "center", padding: "3rem", color: "#475569" }}><span className="spinner" /></div>;
 
   if (!creds.length) return (
+
     <div style={{ textAlign: "center", padding: "4rem", color: "#475569" }}>
+
       <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>--</div>
+
       <p>No certificates issued yet.</p>
+
     </div>
+
   );
 
   return (
+
     <div className="table-wrapper">
+
       <table>
+
         <thead>
+
           <tr>
+
             <th>Student</th>
+
             <th>Email</th>
+
             <th>Reg. No</th>
+
             <th>Degree / Branch</th>
+
             <th>Issue Date</th>
+
             <th>Status</th>
+
             <th>Action</th>
+
           </tr>
+
         </thead>
+
         <tbody>
+
           {creds.map((c) => (
+
             <tr key={c.id}>
+
               <td style={{ color: "#f1f5f9", fontWeight: 500 }}>{c.student_name}</td>
+
               <td>{c.student_email || "-"}</td>
+
               <td className="mono">{c.register_number}</td>
+
               <td>{c.degree} / {c.branch}</td>
+
               <td>{c.issue_date}</td>
+
               <td>
+
                 <span className={`badge badge-${c.status === "ACTIVE" ? "active" : "revoked"}`}>
+
                   {c.status === "ACTIVE" ? "Active" : "Revoked"}
+
                 </span>
+
               </td>
+
               <td>
+
                 {c.status === "ACTIVE" && (
+
                   <button
+
                     className="btn btn-danger btn-sm"
+
                     disabled={revoking === c.credential_hash}
+
                     onClick={() => handleRevoke(c.credential_hash, c.student_name)}
+
                   >
+
                     {revoking === c.credential_hash ? <span className="spinner" /> : "Revoke"}
+
                   </button>
+
                 )}
+
               </td>
+
             </tr>
+
           ))}
+
         </tbody>
+
       </table>
+
     </div>
+
   );
+
 }
 
 export default function UniversityPortal() {
+
   const [university, setUniversity] = useState(() => {
+
     try { return JSON.parse(localStorage.getItem("cv_uni_info")); } catch { return null; }
+
   });
+
   const [tab, setTab] = useState("issue");
+
   const [issued, setIssued] = useState(0);
 
+  const [rotatingRSA, setRotatingRSA] = useState(false);
+
   useEffect(() => {
+
     const checkSessionExpiry = () => {
+
       const expiry =
+
         localStorage.getItem("cv_uni_expiry");
 
       if (!expiry) return;
 
       if (Date.now() > Number(expiry)) {
+
         localStorage.removeItem("cv_uni_token");
+
         localStorage.removeItem("cv_uni_info");
+
         localStorage.removeItem("cv_uni_expiry");
 
         toast.error(
+
           "Session expired. Please login again."
+
         );
 
         setUniversity(null);
+
       }
+
     };
 
     checkSessionExpiry();
 
     const interval = setInterval(
+
       checkSessionExpiry,
+
       10000
+
     );
 
     return () => clearInterval(interval);
+
   }, []);
 
   function handleLogout() {
+
     localStorage.removeItem("cv_uni_token");
+
     localStorage.removeItem("cv_uni_info");
+
     localStorage.removeItem("cv_uni_expiry");
 
     setUniversity(null);
 
     toast("Logged out");
+
   }
+
+  async function handleRotateRSA() {
+
+  if (!window.confirm(
+
+    "Rotate this university's RSA key? The previous public key will be archived."
+
+  )) {
+
+    return;
+
+  }
+
+  setRotatingRSA(true);
+
+  try {
+
+    await rotateIssuerRSAKey(university.wallet, API);
+
+    toast.success("RSA key rotated successfully.");
+
+  } catch (err) {
+
+    toast.error(err.response?.data?.message || err.message);
+
+  } finally {
+
+    setRotatingRSA(false);
+
+  }
+
+}
 
   if (!university) return <LoginStep onLogin={setUniversity} />;
 
   return (
+
     <div className="page" style={portalBg}>
+
       <div className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
+
         <div className="portal-header">
+
           <div>
+
             <h2>{university.name}</h2>
+
             <p style={{ fontSize: "0.85rem", fontFamily: "monospace", color: "#6366f1", marginTop: "0.25rem" }}>
+
               {university.wallet}
+
             </p>
+
           </div>
-          <button
-  className="btn btn-outline btn-sm logout-btn"
-  onClick={handleLogout}
->
-  Logout
-</button>
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={handleRotateRSA}
+              disabled={rotatingRSA}
+            >
+              {rotatingRSA ? "Rotating RSA Key..." : "Rotate RSA Key"}
+            </button>
+            <button
+              className="btn btn-outline btn-sm logout-btn"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </div>
+
         </div>
 
         <div className="tabs portal-tabs">
+
           <button className={`tab${tab === "issue" ? " active" : ""}`} onClick={() => setTab("issue")}>
+
             Issue Certificate
+
           </button>
+
           <button className={`tab${tab === "issued" ? " active" : ""}`} onClick={() => { setTab("issued"); setIssued((p) => p + 1); }}>
+
             Issued Certificates
+
           </button>
+
         </div>
 
         {tab === "issue" && (
+
           <div className="card portal-card">
+
             <h3 style={{ marginBottom: "1.5rem", color: "#f1f5f9" }}>Issue New Certificate</h3>
+
             <IssueForm university={university} onIssued={() => setIssued((p) => p + 1)} />
+
           </div>
+
         )}
 
         {tab === "issued" && (
+
           <div className="card portal-card">
+
             <h3 style={{ marginBottom: "1.5rem", color: "#f1f5f9" }}>Certificates Issued by {university.name}</h3>
+
             <IssuedList refresh={issued} />
+
           </div>
+
         )}
+
       </div>
+
     </div>
+
   );
+
 }

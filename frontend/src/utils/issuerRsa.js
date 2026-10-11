@@ -71,3 +71,86 @@ export async function signIssuerCertificateHash(wallet, hash, API) {
   );
   return btoa(String.fromCharCode(...new Uint8Array(signature)));
 }
+
+
+
+export async function rotateIssuerRSAKey(wallet, API) {
+  if (!window.crypto?.subtle || !window.indexedDB) {
+    throw new Error("Secure browser cryptography is unavailable.");
+  }
+
+  if (!wallet || !/^0x[0-9a-fA-F]{40}$/.test(wallet)) {
+    throw new Error("Connect a valid university wallet first.");
+  }
+
+  const walletAddress = wallet.toLowerCase();
+
+  // Generate a fresh RSA key pair.
+  const pair = await crypto.subtle.generateKey(
+    {
+      name: "RSA-PSS",
+      modulusLength: 3072,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    false,
+    ["sign", "verify"]
+  );
+
+  const publicKey = toPem(
+    await crypto.subtle.exportKey("spki", pair.publicKey)
+  );
+
+  // Ask the authenticated university endpoint to register the new key.
+  // Save the private key only after the backend accepts the rotation.
+  await API.put("/api/auth/rsa-key/rotate", { publicKey });
+
+  await saveKey(walletAddress, {
+    privateKey: pair.privateKey,
+    publicKey,
+  });
+
+  return {
+    success: true,
+    message: "RSA key rotated successfully.",
+  };
+}
+
+
+
+export async function registerRotatedIssuerRSAKey(wallet, API, adminKey) {
+  if (!wallet || !/^0x[0-9a-fA-F]{40}$/.test(wallet)) {
+    throw new Error("Connect a valid university wallet first.");
+  }
+
+  if (!adminKey) {
+    throw new Error("Please log in to the admin panel first.");
+  }
+
+  const walletAddress = wallet.toLowerCase();
+  const keyRecord = await readKey(walletAddress);
+
+  if (!keyRecord?.privateKey || !keyRecord?.publicKey) {
+    throw new Error(
+      "No locally stored RSA key found. Generate the new key first."
+    );
+  }
+
+  await API.put(
+    "/api/auth/rsa-key/rotate",
+    {
+      wallet: walletAddress,
+      publicKey: keyRecord.publicKey,
+    },
+    {
+      headers: {
+        "x-admin-key": adminKey,
+      },
+    }
+  );
+
+  return {
+    success: true,
+    message: "RSA public key rotation completed.",
+  };
+}
