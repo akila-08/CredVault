@@ -1,4 +1,4 @@
-﻿import { verifyMessage } from "ethers";
+import { verifyMessage } from "ethers";
 import supabase from "../services/supabaseService.js";
 import { sendOwnershipVerificationEmail } from "../services/emailService.js";
 
@@ -42,7 +42,7 @@ async function hydrateRequests(requests) {
 
     const { data: credentials, error } = await supabase
         .from("credentials")
-        .select("id, student_name, student_email, degree, branch, institution, issue_date, credential_hash, document_hash, status")
+        .select("id, student_name, student_email, student_wallet, degree, branch, institution, issue_date, credential_hash, document_hash, status")
         .in("id", ids);
 
     if (error) throw error;
@@ -146,7 +146,7 @@ export async function getStudentVerificationRequests(req, res) {
         const { data: requests, error } = await supabase
             .from("verification_requests")
             .select("*")
-            .eq("student_email", studentEmail)
+            .ilike("student_email", studentEmail)
             .order("created_at", { ascending: false });
 
         if (error) throw error;
@@ -200,7 +200,7 @@ export async function approveVerificationRequest(req, res) {
             .from("verification_requests")
             .select("*")
             .eq("id", id)
-            .eq("student_email", studentEmail)
+            .ilike("student_email", studentEmail)
             .single();
 
         if (requestError || !request) {
@@ -339,7 +339,7 @@ export async function rejectVerificationRequest(req, res) {
             .from("verification_requests")
             .select("*")
             .eq("id", id)
-            .eq("student_email", studentEmail)
+            .ilike("student_email", studentEmail)
             .single();
 
         if (requestError || !request) {

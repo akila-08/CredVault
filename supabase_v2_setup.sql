@@ -120,6 +120,14 @@ create table if not exists public.validators1 (
   created_at timestamptz not null default now()
 );
 
+-- One-time SIWE challenges issued by GET /api/auth/nonce/:address.
+create table if not exists public.siwe_nonces (
+  wallet_address text primary key check (wallet_address = lower(wallet_address)),
+  nonce text not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
 alter table public.credentials enable row level security;
 alter table public.performance_runs enable row level security;
 alter table public.verifiers enable row level security;
@@ -129,6 +137,7 @@ alter table public.issuer_registry1 enable row level security;
 alter table public.issuer_proposals1 enable row level security;
 alter table public.issuer_votes1 enable row level security;
 alter table public.validators1 enable row level security;
+alter table public.siwe_nonces enable row level security;
 
 -- The Student Portal reads a student's credential rows with their Supabase Auth session.
 drop policy if exists credentials_student_read on public.credentials;

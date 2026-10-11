@@ -8,23 +8,42 @@ const API = axios.create({
 // Calls that pass an Authorization header explicitly, such as Supabase student
 // session calls, are left unchanged.
 API.interceptors.request.use((config) => {
-    if (config.headers?.Authorization || config.headers?.authorization) {
+    const existingAuth =
+        config.headers?.Authorization ||
+        config.headers?.authorization ||
+        (typeof config.headers?.get === "function" && (config.headers.get("Authorization") || config.headers.get("authorization")));
+
+    if (existingAuth) {
         return config;
     }
 
     const url = config.url || "";
-    const verifierRoutes = [
-        "/api/credentials/verify",
-        "/api/verifiers/profile",
-        "/api/verifiers/change-password",
-        "/api/verification-requests",
-    ];
-    const needsVerifierToken = verifierRoutes.some((route) => url.includes(route));
-    const token = needsVerifierToken
+    const isStudentRoute =
+        url.startsWith("/api/verification-requests/student") ||
+        url.includes("/approve") ||
+        url.includes("/reject");
+
+    if (isStudentRoute) {
+        return config;
+    }
+
+    const isVerifierRoute =
+        url.startsWith("/api/verifiers") ||
+        url === "/api/credentials/verify" ||
+        url === "/api/verification-requests" ||
+        url.startsWith("/api/verification-requests/verifier");
+
+    const token = isVerifierRoute
         ? localStorage.getItem("cv_verifier_token")
         : localStorage.getItem("cv_uni_token");
 
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+        if (typeof config.headers?.set === "function") {
+            config.headers.set("Authorization", `Bearer ${token}`);
+        } else {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    }
     return config;
 });
 

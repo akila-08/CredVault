@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { ethers } from "ethers";
 import toast from "react-hot-toast";
@@ -50,6 +50,17 @@ function buildApprovalMessage({ request, studentEmail }) {
     `Credential Hash: ${request.credential?.credential_hash || request.credential?.document_hash || ""}`,
     `Student Email: ${String(studentEmail || "").trim().toLowerCase()}`,
     "I approve this ownership verification request.",
+  ].join("\n");
+}
+
+function buildRejectionMessage({ request, studentEmail }) {
+  return [
+    "CredVault Ownership Verification",
+    `Request ID: ${request.id}`,
+    `Credential ID: ${request.credential_id}`,
+    `Credential Hash: ${request.credential?.credential_hash || request.credential?.document_hash || ""}`,
+    `Student Email: ${String(studentEmail || "").trim().toLowerCase()}`,
+    "I reject this ownership verification request.",
   ].join("\n");
 }
 
@@ -171,7 +182,14 @@ function VerificationRequests({ requests, loading, approving, rejecting, onAppro
               {requests.map((request) => (
                 <tr key={request.id}>
                   <td style={{ color: "#f1f5f9", fontWeight: 500 }}>{request.verifier_name || request.verifier_email || "Verifier"}</td>
-                  <td>{request.credential ? `${request.credential.degree} / ${request.credential.branch}` : request.credential_id}</td>
+                  <td>
+                    <div>{request.credential ? `${request.credential.degree} / ${request.credential.branch}` : request.credential_id}</div>
+                    {request.credential?.student_wallet && (
+                      <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.25rem" }}>
+                        Wallet: <span style={{ fontFamily: "monospace", color: "#60a5fa" }}>{request.credential.student_wallet.slice(0, 6)}...{request.credential.student_wallet.slice(-4)}</span>
+                      </div>
+                    )}
+                  </td>
                   <td>{formatDate(request.created_at)}</td>
                   <td><StatusBadge status={request.status} /></td>
                   <td>
@@ -228,6 +246,7 @@ function CredCard({ cred }) {
         {[
           { label: "Student", value: cred.student_name },
           { label: "Email", value: cred.student_email || "-" },
+          { label: "Wallet", value: cred.student_wallet ? `${cred.student_wallet.slice(0, 8)}...${cred.student_wallet.slice(-6)}` : "-", mono: true },
           { label: "Register No.", value: cred.register_number },
           { label: "Issue Date", value: cred.issue_date },
           { label: "Tx Hash", value: cred.tx_hash ? `${cred.tx_hash.slice(0, 14)}...` : "-", mono: true },
@@ -311,10 +330,11 @@ function Dashboard({ user, onLogout }) {
     try {
       setLoading(true);
 
+      const email = String(user.email || "").trim().toLowerCase();
       const { data, error } = await supabase
         .from("credentials")
         .select("*")
-        .eq("student_email", user.email);
+        .ilike("student_email", email);
 
       if (error) throw error;
 
@@ -352,6 +372,16 @@ function Dashboard({ user, onLogout }) {
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
       const walletAddress = await signer.getAddress();
+
+      const expectedWallet = request.credential?.student_wallet;
+      if (expectedWallet && walletAddress.toLowerCase() !== expectedWallet.toLowerCase()) {
+        toast.error(
+          `Connected wallet (${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}) does not match student wallet on certificate (${expectedWallet.slice(0, 6)}...${expectedWallet.slice(-4)}). Please switch accounts in MetaMask.`
+        );
+        setApproving(null);
+        return;
+      }
+
       const message = buildApprovalMessage({ request, studentEmail: user.email });
       const signature = await signer.signMessage(message);
       const config = await getStudentAuthConfig();
@@ -401,21 +431,18 @@ function Dashboard({ user, onLogout }) {
       await provider.send("eth_requestAccounts", []);
 
       const signer = await provider.getSigner();
-
       const walletAddress = await signer.getAddress();
 
-      const message = [
-        "CredVault Ownership Verification",
-        `Request ID: ${request.id}`,
-        `Credential ID: ${request.credential_id}`,
-        `Credential Hash: ${request.credential?.credential_hash ||
-        request.credential?.document_hash ||
-        ""
-        }`,
-        `Student Email: ${user.email}`,
-        "I reject this ownership verification request.",
-      ].join("\n");
+      const expectedWallet = request.credential?.student_wallet;
+      if (expectedWallet && walletAddress.toLowerCase() !== expectedWallet.toLowerCase()) {
+        toast.error(
+          `Connected wallet (${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}) does not match student wallet on certificate (${expectedWallet.slice(0, 6)}...${expectedWallet.slice(-4)}). Please switch accounts in MetaMask.`
+        );
+        setRejecting(null);
+        return;
+      }
 
+      const message = buildRejectionMessage({ request, studentEmail: user.email });
       const signature = await signer.signMessage(message);
 
       const config = await getStudentAuthConfig();
@@ -501,22 +528,19 @@ export default function StudentPortal() {
 
   useEffect(() => {
     const checkSessionExpiry = async () => {
-      const loginExpiry =
-        localStorage.getItem("loginExpiry");
-
+      const loginExpiry = localStorage.getItem("loginExpiry");
       if (!loginExpiry) return;
 
       if (Date.now() > Number(loginExpiry)) {
-        await supabase.auth.signOut();
-
         localStorage.removeItem("loginTime");
         localStorage.removeItem("loginExpiry");
 
-        toast.error(
-          "Session expired. Please login again."
-        );
-
-        setUser(null);
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+          await supabase.auth.signOut();
+          toast.error("Session expired. Please login again.");
+          setUser(null);
+        }
       }
     };
 
